@@ -2,29 +2,11 @@
 REM ===========================================================================
 REM  consulta-estoque.bat
 REM  @author Ruda Gabriel
-REM  @version 5.30.0
+REM  @version 5.30.1
 REM  @changelog
-REM    5.30.0 - 2026-10-05 19:00 - Revisao comparando a v5.29.3 com o
-REM      consulta-estoque.js 5.34.0 e o node-firebird.bat:
-REM      [1] Porta lida do config.json (portaEstoque/portaConsulta, mesma regra
-REM          do servidor). Antes 7888 era fixo: com outra porta configurada, a
-REM          checagem de porta ocupada, o link e o navegador apontavam errado.
-REM      [2] Porta ocupada detectada tambem em Windows em portugues: o netstat
-REM          mostra "OUVINDO" e nao "LISTENING" - a checagem nunca disparava.
-REM      [3] Encerramento limpo: tecla 0 e "substituir servidor antigo" pedem
-REM          POST /api/encerrar (so aceito de 127.0.0.1) e esperam ate ~8s; so
-REM          entao usam taskkill /f. Antes o /f matava o Node sem gravar a
-REM          ultima marcacao de "usado" ainda pendente.
-REM      [4] Node.js minimo verificado (18+, exigido pelos testes). Instalador
-REM          atualizado para o Node 22.22.0 LTS (o 20.x saiu de suporte em
-REM          abril/2026).
-REM      [5] Do node-firebird.bat: PATH do sistema relido do registro apos
-REM          instalar o Node; npm tenta primeiro o cache local (--prefer-offline)
-REM          e so depois baixa da internet, com verificacao pos-instalacao.
-REM      [6] Arquivo de PID por porta (duas pastas/portas nao se atrapalham).
-REM      Mantido da v5.29.3: QuickEdit desativado, auto-elevacao para instalar
-REM      o Node, SHA256 do MSI, verificacoes de integridade com confirmacao,
-REM      monitoramento do servidor e tecla 0 para encerrar.
+REM    5.30.1 - 2026-11-05 - Mensagens do console revisadas para linguagem
+REM      formal ("Execute:" no lugar de "Rode:", "muito antigo", "permaneceu
+REM      aberta ou em execucao oculta" etc.). Sem mudanca de comportamento.
 REM
 REM  Mantenha este arquivo com quebras de linha CRLF ("call :rotina" falha com LF).
 REM ===========================================================================
@@ -70,7 +52,7 @@ for /f "delims=" %%v in ('node -v 2^>nul') do set "NODE_VER=%%v"
 set "NODE_MAJOR=0"
 for /f "tokens=1 delims=v." %%m in ("%NODE_VER%") do set /a "NODE_MAJOR=%%m" > nul 2>&1
 if %NODE_MAJOR% GTR 0 if %NODE_MAJOR% LSS 18 (
-    echo  [AVISO] Node.js %NODE_VER% e antigo demais ^(minimo recomendado: 18^).
+    echo  [AVISO] Node.js %NODE_VER% e muito antigo ^(minimo recomendado: 18^).
     echo          Atualize em https://nodejs.org para evitar falhas.
     echo.
 )
@@ -91,7 +73,7 @@ REM esta embutido dentro de consulta-estoque.js (constante _ENGINE_SRC). O
 REM arquivo solto so e usado pela suite de testes.
 if not exist "estoque-engine.js" (
     echo  [AVISO] estoque-engine.js nao encontrado.
-    echo  O servidor funciona normalmente sem ele ^(o motor vai embutido^),
+    echo  O servidor funciona normalmente sem ele ^(o motor ja esta embutido^),
     echo  mas a suite de testes nao podera ser executada.
     echo.
 )
@@ -132,7 +114,7 @@ if not errorlevel 1 goto :firebird_instalado
 echo.
 echo  [ERRO] Falha ao instalar node-firebird.
 echo  Possiveis causas: sem internet, proxy nao configurado ou sem permissao
-echo  de escrita nesta pasta. Tente manualmente: npm install node-firebird
+echo  de escrita nesta pasta. Execute manualmente: npm install node-firebird
 echo.
 pause
 exit /b 1
@@ -166,7 +148,7 @@ if exist "validar-client.js" (
     REM de ( ) seria expandido antes do node rodar e a falha passaria batido.
     if errorlevel 1 (
         echo  [ERRO] Erro de sintaxe no JavaScript da interface ^(client-side^).
-        echo         Rode: node validar-client.js
+        echo         Execute: node validar-client.js
         set "VERIFICACAO_FALHOU=1"
     )
 )
@@ -176,7 +158,7 @@ if exist "consulta-estoque_test.js" (
         node --test "consulta-estoque_test.js" > nul 2>&1
         if errorlevel 1 (
             echo  [AVISO] A suite de testes ^(engine + servidor^) falhou.
-            echo          Rode: node --test consulta-estoque_test.js
+            echo          Execute: node --test consulta-estoque_test.js
             set "VERIFICACAO_FALHOU=1"
         )
     )
@@ -216,7 +198,7 @@ tasklist /fi "PID eq %PORTA_PID%" /fo csv /nh 2>nul | find /i "node.exe" > nul
 if errorlevel 1 goto :porta_ocupada_outro
 
 echo  [AVISO] Ja existe um servidor Node em execucao na porta %PORTA% ^(PID %PORTA_PID%^).
-echo          Provavelmente uma janela anterior ficou aberta ou rodando oculta.
+echo          Provavelmente uma janela anterior permaneceu aberta ou em execucao oculta.
 echo.
 choice /c SN /n /m "  Encerrar o servidor antigo e iniciar um novo? [S/N]: "
 if errorlevel 2 goto :cancelar_porta

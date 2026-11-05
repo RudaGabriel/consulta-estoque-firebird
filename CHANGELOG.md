@@ -9,9 +9,9 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.43.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.44.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
-- [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.30.0**.
+- [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.30.1**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.10.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
 - [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.1**.
@@ -21,6 +21,22 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.44.0 (2026-11-05)
+
+```text
+Textos da interface revisados para português formal:
+  rótulos, dicas (title), avisos (toasts), janelas de confirmação e
+  mensagens de erro da API. Exemplos: "Resetar usados" → "Limpar itens
+  usados"; "exige reiniciar" → "requer reinicialização"; "pergunto de
+  novo"/"Vou lembrar você" → "o alerta será exibido novamente"; "Tentei
+  todas as possibilidades" → "Todas as possibilidades foram testadas";
+  "Body inválido"/"fbPort inválida" → "Corpo da requisição inválido"/
+  "Porta do Firebird inválida". Corrigido "excluír" → "excluir" e a dica
+  do Agrupar (pares e trios, não "sem limite de quantidade"). A dica do
+  estoque mínimo reflete a regra única da 5.43.0. Sem mudança de
+  comportamento.
+```
 
 ### 5.43.0 (2026-10-09)
 
@@ -504,6 +520,14 @@ Modo Agrupar (encontrarGruposAsync) não funcionava
 ## consulta-estoque.bat
 
 _Inicializador para Windows_
+
+### 5.30.1 (2026-11-05)
+
+```text
+Mensagens do console revisadas para linguagem
+  formal ("Execute:" no lugar de "Rode:", "muito antigo", "permaneceu
+  aberta ou em execucao oculta" etc.). Sem mudanca de comportamento.
+```
 
 ### 5.30.0 (2026-10-05 19:00)
 

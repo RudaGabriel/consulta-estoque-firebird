@@ -5,14 +5,19 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.43.0
+ * @version 5.44.0
  * @changelog
- *   5.43.0 - 2026-10-09 - Estoque mínimo com regra única (motor 1.8.0):
- *     um item só é sugerido se, depois do uso, o estoque continuar maior ou
- *     igual ao mínimo — em Agrupar, Combinar, Modo Automático (com ou sem
- *     "Reaproveitar código"). O aviso do botão "Usar" segue a mesma regra:
- *     avisa quando o uso DEIXARIA o estoque abaixo do mínimo, contando as
- *     repetições do mesmo código, e mostra com quanto o item ficaria.
+ *   5.44.0 - 2026-11-05 - Textos da interface revisados para português formal:
+ *     rótulos, dicas (title), avisos (toasts), janelas de confirmação e
+ *     mensagens de erro da API. Exemplos: "Resetar usados" → "Limpar itens
+ *     usados"; "exige reiniciar" → "requer reinicialização"; "pergunto de
+ *     novo"/"Vou lembrar você" → "o alerta será exibido novamente"; "Tentei
+ *     todas as possibilidades" → "Todas as possibilidades foram testadas";
+ *     "Body inválido"/"fbPort inválida" → "Corpo da requisição inválido"/
+ *     "Porta do Firebird inválida". Corrigido "excluír" → "excluir" e a dica
+ *     do Agrupar (pares e trios, não "sem limite de quantidade"). A dica do
+ *     estoque mínimo reflete a regra única da 5.43.0. Sem mudança de
+ *     comportamento.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
  * NÃO depende de gerar-relatorio-html.js nem servidor-relatorio.js.
@@ -1973,20 +1978,20 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
 <div class="ctrl">
   <div class="cg">
     <label class="cl cl-busca" for="txtBusca" title="Buscar (descri&ccedil;&atilde;o, c&oacute;digo, EAN, &gt;N, &lt;N)"><span class="cl-busca-txt">Buscar (descri&ccedil;&atilde;o, c&oacute;digo, EAN, &gt;N, &lt;N)</span><button type="button" class="lnk-toggle" id="btnBuscaMulti" onclick="toggleBuscaMulti()" title="Mudar para busca personalizada (v&aacute;rios c&oacute;digos, produtos e/ou c&oacute;digos de barra de uma vez, um por linha)" aria-label="Busca personalizada"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="4.5" x2="13" y2="4.5"/><line x1="3" y1="8" x2="13" y2="8"/><line x1="3" y1="11.5" x2="9" y2="11.5"/></svg></button></label>
-    <input type="text" id="txtBusca" placeholder="Nome, c&oacute;d, EAN, &gt;200, produto&gt;10..." title="Buscar por descri&ccedil;&atilde;o, c&oacute;digo ou EAN. Filtro de estoque: &gt;N (estoque m&iacute;nimo) ou &lt;N (estoque m&aacute;ximo), sozinhos ou combinados com o texto. Ex: produto&gt;10 mostra produtos com &quot;produto&quot; no nome e 10 ou mais em estoque; produto&lt;10 mostra os com 10 ou menos." oninput="filtrarDebounced()">
-    <textarea id="txtBuscaMulti" class="busca-multi-ta" style="display:none" title="Um c&oacute;digo, produto ou c&oacute;digo de barras por linha (ou separados por v&iacute;rgula)" placeholder="Um c&oacute;digo, produto ou c&oacute;digo de barras por linha (ou separados por v&iacute;rgula). Mistura os tipos livremente. Ex:&#10;08395&#10;7891234567890&#10;ARROZ" oninput="filtrarDebounced()"></textarea>
+    <input type="text" id="txtBusca" placeholder="Descri&ccedil;&atilde;o, c&oacute;digo, EAN, &gt;200, produto&gt;10..." title="Buscar por descri&ccedil;&atilde;o, c&oacute;digo ou EAN. Filtro de estoque: &gt;N (estoque m&iacute;nimo) ou &lt;N (estoque m&aacute;ximo), isolados ou combinados com o texto. Ex.: produto&gt;10 exibe os produtos com &quot;produto&quot; na descri&ccedil;&atilde;o e 10 ou mais unidades em estoque; produto&lt;10 exibe os que t&ecirc;m 10 ou menos." oninput="filtrarDebounced()">
+    <textarea id="txtBuscaMulti" class="busca-multi-ta" style="display:none" title="Um c&oacute;digo, produto ou c&oacute;digo de barras por linha (ou separados por v&iacute;rgula)" placeholder="Um c&oacute;digo, produto ou c&oacute;digo de barras por linha (ou separados por v&iacute;rgula). Os tipos podem ser combinados livremente. Exemplo:&#10;08395&#10;7891234567890&#10;ARROZ" oninput="filtrarDebounced()"></textarea>
   </div>
 
   <div class="cg">
     <label class="cl" for="numPrc">Busca por valor (R$)</label>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap">
-      <input type="number" id="numPrc" placeholder="Ex: 250,00" step="0.01" min="0" oninput="onPrecoInput()">
-      <label class="tgl-wrap" style="flex-shrink:0" title="Agrupar itens distintos (sem limite de quantidade) que somem ao valor informado, respeitando estoque m&iacute;nimo e toler&acirc;ncia +R$40">
+      <input type="number" id="numPrc" placeholder="Ex.: 250,00" step="0.01" min="0" oninput="onPrecoInput()">
+      <label class="tgl-wrap" style="flex-shrink:0" title="Agrupa pares e trios de itens distintos cuja soma atinja o valor informado, respeitando o estoque m&iacute;nimo e a toler&acirc;ncia de at&eacute; R$ 40">
         <input type="checkbox" id="chkGrupar" onchange="filtrar()">
         <span class="tgl"></span>
         <span class="tgl-lbl">Agrupar</span>
       </label>
-      <label class="tgl-wrap" style="flex-shrink:0" title="Busca combina&ccedil;&otilde;es com repeti&ccedil;&atilde;o do mesmo item (ex: 3&times;08395) — marca como usado s&oacute; ap&oacute;s confirma&ccedil;&atilde;o">
+      <label class="tgl-wrap" style="flex-shrink:0" title="Busca combina&ccedil;&otilde;es que repetem o mesmo item (ex.: 3&times;08395). Os itens s&oacute; s&atilde;o marcados como usados ap&oacute;s a confirma&ccedil;&atilde;o.">
         <input type="checkbox" id="chkAcima" onchange="filtrar()">
         <span class="tgl"></span>
         <span class="tgl-lbl">Combinar</span>
@@ -2015,7 +2020,7 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
 
   <div class="cg" style="margin-left:auto;flex-shrink:0">
     <label class="cl">&nbsp;</label>
-    <button class="btn btn-d btn-sm" onclick="resetarUsados()" id="btnReset"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px"><path d="M2.5 4.5h11M6 4.5v-1a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1M5.5 4.5l.7 8h3.6l.7-8"/><path d="M7 7.5v3M9 7.5v3"/></svg>Resetar usados</button>
+    <button class="btn btn-d btn-sm" onclick="resetarUsados()" id="btnReset"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px"><path d="M2.5 4.5h11M6 4.5v-1a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1M5.5 4.5l.7 8h3.6l.7-8"/><path d="M7 7.5v3M9 7.5v3"/></svg>Limpar itens usados</button>
   </div>
 </div>
 
@@ -2102,27 +2107,27 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
           <div class="cfg-field">
             <label class="cfg-lbl" for="cfgPorta" title="Porta HTTP">Porta HTTP</label>
             <input class="cfg-inp" id="cfgPorta" type="number" placeholder="7888" min="1024" max="65534" style="font-family:inherit">
-            <span class="cfg-hint">Padr&atilde;o: 7888 &middot; exige reiniciar</span>
+            <span class="cfg-hint">Padr&atilde;o: 7888 &middot; requer reinicializa&ccedil;&atilde;o</span>
           </div>
           <div class="cfg-field">
             <label class="cfg-lbl" for="cfgEstMin" title="Estoque m&iacute;nimo">Estoque m&iacute;nimo</label>
             <input class="cfg-inp" id="cfgEstMin" type="number" placeholder="5" min="0" max="9999" step="1" style="font-family:inherit">
-            <span class="cfg-hint">Abaixo disso o item sai da listagem (padr&atilde;o: 5)</span>
+            <span class="cfg-hint">As sugest&otilde;es nunca deixam o estoque abaixo deste valor (padr&atilde;o: 5)</span>
           </div>
           <div class="cfg-field">
             <label class="cfg-lbl" for="cfgMaxItens" title="M&aacute;ximo de itens carregados do banco">M&aacute;x. itens do banco</label>
             <input class="cfg-inp" id="cfgMaxItens" type="number" placeholder="2000" min="100" max="20000" step="100" style="font-family:inherit">
-            <span class="cfg-hint">100&ndash;20000 (padr&atilde;o: 2000) &middot; aplicado na hora</span>
+            <span class="cfg-hint">100&ndash;20000 (padr&atilde;o: 2000) &middot; aplicado imediatamente</span>
           </div>
           <div class="cfg-field">
             <label class="cfg-lbl" for="cfgAppName" title="Nome da aplica&ccedil;&atilde;o">Nome da aplica&ccedil;&atilde;o</label>
             <input class="cfg-inp" id="cfgAppName" type="text" placeholder="Consulta Estoque">
-            <span class="cfg-hint">Exige reiniciar</span>
+            <span class="cfg-hint">Requer reinicializa&ccedil;&atilde;o</span>
           </div>
         </div>
         <span class="cfg-note cfg-note-warn">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;margin-top:1px"><path d="M8 1.5 1.5 13.5h13z"/><line x1="8" y1="6" x2="8" y2="9.5"/><circle cx="8" cy="12" r=".7" fill="currentColor" stroke="none"/></svg>
-          Requer reiniciar o servidor para aplicar altera&ccedil;&otilde;es de porta e nome.
+          A altera&ccedil;&atilde;o da porta ou do nome requer a reinicializa&ccedil;&atilde;o do servidor.
         </span>
       </div>
 
@@ -2135,7 +2140,7 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
         </div>
         <div class="cfg-grid-1">
           <div class="cfg-field">
-            <label class="cfg-lbl" for="cfgProib">Um termo por linha &mdash; itens cuja descri&ccedil;&atilde;o contenha o termo n&atilde;o s&atilde;o sugeridos. Pode colar separado por v&iacute;rgula ou ponto e v&iacute;rgula: o formato &eacute; ajustado automaticamente.</label>
+            <label class="cfg-lbl" for="cfgProib">Um termo por linha &mdash; itens cuja descri&ccedil;&atilde;o contenha o termo n&atilde;o s&atilde;o sugeridos. Tamb&eacute;m &eacute; poss&iacute;vel colar termos separados por v&iacute;rgula ou ponto e v&iacute;rgula; o formato &eacute; ajustado automaticamente.</label>
             <textarea class="cfg-inp cfg-ta" id="cfgProib" placeholder="PRODUTO EXEMPLO&#10;OUTRA MARCA&#10;ITEM ESPECIFICO" oninput="_aoDigitarProibidos()" onblur="_formatarCampoProibidos()" onpaste="setTimeout(_formatarCampoProibidos, 0)"></textarea>
             <div class="cfg-proib-info" id="cfgProibInfo" aria-live="polite"></div>
           </div>
@@ -2171,12 +2176,12 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
     </div>
     <div class="auto-desc">
       Cole a lista no formato abaixo e clique em <strong>Iniciar</strong>.
-      O sistema ir&aacute; buscar os c&oacute;digos automaticamente.<br>
+      O sistema buscar&aacute; os c&oacute;digos automaticamente.<br>
       <span style="color:var(--acc);font-family:Consolas,monospace;font-size:11px">
         Pedido 1:<br>139,00&nbsp;&nbsp;CREDITO<br>Pedido 2:<br>177,00&nbsp;&nbsp;CREDITO<br>Pedido 3:<br>197,00&nbsp;&nbsp;PIX&nbsp;&nbsp;[NAO ENCONTRADO]
       </span>
       <span style="display:block;margin-top:4px;font-size:11px">
-        O "[NAO ENCONTRADO]" &eacute; opcional &mdash; &uacute;til se voc&ecirc; est&aacute; colando de volta uma sa&iacute;da anterior;
+        O marcador "[NAO ENCONTRADO]" &eacute; opcional e &uacute;til ao reutilizar um resultado anterior;
         ele &eacute; sempre substitu&iacute;do pelos c&oacute;digos encontrados neste processamento.
       </span>
     </div>
@@ -2194,7 +2199,7 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
         <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px"><path d="M3 4.5h10M3 8h10M3 11.5h6"/></svg>Configurar lista
       </button>
       <span id="lpResumo" style="font-size:11px;color:var(--txt3);flex-shrink:0;white-space:nowrap"></span>
-      <label class="tgl-wrap" id="reaproveitarToggleWrap" title="Reaproveita o mesmo c&oacute;digo em v&aacute;rias combina&ccedil;&otilde;es/linhas, respeitando o estoque m&iacute;nimo configurado. S&oacute; marca como usado quando o c&oacute;digo esgotar essa sobra (s&oacute; vale no modo padr&atilde;o, sem lista personalizada)." style="width:fit-content;flex-shrink:0">
+      <label class="tgl-wrap" id="reaproveitarToggleWrap" title="Permite reutilizar o mesmo c&oacute;digo em v&aacute;rias linhas e combina&ccedil;&otilde;es, respeitando o estoque m&iacute;nimo configurado. O c&oacute;digo s&oacute; &eacute; marcado como usado quando n&atilde;o houver mais saldo acima do m&iacute;nimo. V&aacute;lido apenas no modo padr&atilde;o, sem lista personalizada." style="width:fit-content;flex-shrink:0">
         <input type="checkbox" id="chkReaproveitarPadrao" onchange="_salvarPrefReaproveitar()">
         <span class="tgl"></span>
         <span class="tgl-lbl">Reaproveitar c&oacute;digo</span>
@@ -2224,8 +2229,8 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
     </div>
     <div class="auto-desc">
       Um c&oacute;digo por linha. Formato: <strong>c&oacute;digo, estoque de parada (opcional)</strong>.
-      Quando o estoque do produto atingir esse n&uacute;mero, o modo autom&aacute;tico para de us&aacute;-lo.
-      Sem o segundo valor, o c&oacute;digo &eacute; usado livremente.<br>
+      Quando o estoque do produto atingir esse valor, o Modo Autom&aacute;tico deixa de utiliz&aacute;-lo.
+      Sem o segundo valor, o c&oacute;digo &eacute; utilizado at&eacute; o estoque zerar.<br>
       <span style="color:var(--acc);font-family:Consolas,monospace;font-size:11px">
         Exemplo:<br>00278, 30<br>08395
       </span>
@@ -2254,9 +2259,9 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
   <div class="auto-bx" id="lpAlertaBx" style="max-width:560px">
     <div class="auto-ttl">
       <span><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:6px"><path d="M8 5v4M8 11.2h.01"/><path d="M7.16 2.68 1.4 12.5A1.4 1.4 0 0 0 2.6 14.6h10.8a1.4 1.4 0 0 0 1.2-2.1L8.84 2.68a1.4 1.4 0 0 0-2.42-.01"/></svg>C&oacute;digos da lista personalizada esgotados</span>
-      <button class="auto-close" onclick="_lpaResolverTodos('depois')" title="Fechar (deixa todos para depois — pergunto de novo nesta sess&atilde;o at&eacute; voc&ecirc; decidir, ou na pr&oacute;xima vez que abrir o sistema)" aria-label="Fechar"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+      <button class="auto-close" onclick="_lpaResolverTodos('depois')" title="Fechar (adia todos; o alerta ser&aacute; exibido novamente nesta sess&atilde;o ou na pr&oacute;xima abertura do sistema)" aria-label="Fechar"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
     </div>
-    <div class="auto-desc" id="lpAlertaCount">Os c&oacute;digos abaixo est&atilde;o na sua lista personalizada, mas cada um deles zerou, ficou negativado, foi exclu&iacute;do do banco, ficou INATIVO no sistema ou atingiu o valor de parada configurado (o motivo espec&iacute;fico est&aacute; em cada linha). Escolha, para cada um, se deseja exclu&iacute;-lo da lista ou deixar para decidir depois (volta a perguntar sobre ele a cada nova sess&atilde;o, at&eacute; voc&ecirc; decidir) — ou resolva todos de uma vez no rodap&eacute;.</div>
+    <div class="auto-desc" id="lpAlertaCount">Os c&oacute;digos abaixo est&atilde;o na sua lista personalizada, mas cada um deles est&aacute; zerado, negativado, foi exclu&iacute;do do banco, est&aacute; INATIVO no sistema ou atingiu o estoque de parada configurado (o motivo est&aacute; indicado em cada linha). Para cada c&oacute;digo, escolha se deseja exclu&iacute;-lo da lista ou decidir depois (o alerta &eacute; exibido novamente a cada sess&atilde;o, at&eacute; que haja uma decis&atilde;o), ou resolva todos de uma vez pelos bot&otilde;es do rodap&eacute;.</div>
     <div class="lpa-lista" id="lpAlertaLista"></div>
     <div class="lpa-rodape">
       <button class="btn btn-s btn-sm" onclick="_lpaResolverTodos('depois')">Deixar todos para depois</button>
@@ -2718,14 +2723,14 @@ function carregarItens() {
         if (_estMinResp > 0) {
             if (_totalResp < _S.maxItens) {
                 // Não conseguiu completar a lista mesmo com itens abaixo do mínimo
-                var _msgIncompleta = 'Banco insuficiente: apenas ' + _totalResp + ' iten' +
+                var _msgIncompleta = 'Itens insuficientes no banco: apenas ' + _totalResp + ' iten' +
                     (_totalResp === 1 ? '' : 's') + ' encontrado' + (_totalResp === 1 ? '' : 's') +
                     ' (estoque mínimo: ' + _estMinResp + ')';
                 if (_nAbaixoResp > 0) {
                     _msgIncompleta += ' — incluindo ' + _nAbaixoResp +
-                        ' abaixo do mínimo para tentar completar';
+                        ' abaixo do mínimo para completar a lista';
                 }
-                _msgIncompleta += '. Reduza o estoque mínimo nas configurações para ver mais itens.';
+                _msgIncompleta += '. Para exibir mais itens, reduza o estoque mínimo nas Configurações.';
                 toast(_msgIncompleta, 8000);
             } else if (_nAbaixoResp > 0) {
                 // Completou a lista ampliando com itens abaixo do mínimo
@@ -3282,8 +3287,8 @@ function resetarUsados() {
         'Limpar todos os itens marcados como usados?\\nTodos voltam para o in\u00edcio da fila.',
         function() {
             apiFetch('/api/resetar-usados', { method: 'POST' }).then(function(r) {
-                if (!r || !r.ok) { toast('Falha ao resetar.', 2000); return; }
-                toast('Fila de usados limpa!', 2200);
+                if (!r || !r.ok) { toast('Falha ao limpar a fila de itens usados.', 2500); return; }
+                toast('A fila de itens usados foi limpa.', 2200);
                 carregarItens();
             });
         }
@@ -3987,7 +3992,7 @@ function _atualizarRodapeRender() {
     }
     el.style.display   = '';
     el.textContent     = 'Mostrando ' + _renderCursor + ' de ' + _vis.length +
-                         ' \u2014 role para carregar mais';
+                         ' \u2014 role a p\u00e1gina para carregar mais';
 }
 
 // ── Sentinela de rolagem ──────────────────────────────────────────────────────
@@ -4208,7 +4213,7 @@ function _renderAlertaLpModal() {
     if (count) {
         var n = _lpAlertasPendentes.length;
         count.textContent = n + (n === 1 ? ' c\u00f3digo precisa' : ' c\u00f3digos precisam') +
-            ' da sua decis\u00e3o: exclu\u00edr da lista ou deixar para decidir depois.';
+            ' de uma decis\u00e3o: excluir da lista ou decidir depois.';
     }
 
     _lpAlertasPendentes.forEach(function(alerta) {
@@ -4242,7 +4247,7 @@ function _renderAlertaLpModal() {
         var bDepois = document.createElement('button');
         bDepois.className = 'btn btn-s btn-sm';
         bDepois.textContent = 'Deixar para depois';
-        bDepois.title = 'Manter na lista \u2014 pergunto de novo na pr\u00f3xima sess\u00e3o (ou se o item continuar pendente nesta mesma sess\u00e3o)';
+        bDepois.title = 'Mant\u00e9m na lista; o alerta ser\u00e1 exibido novamente na pr\u00f3xima sess\u00e3o (ou ainda nesta, se a pend\u00eancia continuar)';
 
         var bExcluir = document.createElement('button');
         bExcluir.className = 'btn btn-d btn-sm';
@@ -4305,7 +4310,7 @@ function _lpaResolverTodos(acao) {
         _removerCodigosListaPersonalizada(codigos);
     } else {
         codigos.forEach(_lpAlertaAdiar);
-        toast('Vou lembrar voc\u00ea de novo na pr\u00f3xima sess\u00e3o sobre ' + codigos.length +
+        toast('O alerta ser\u00e1 exibido novamente na pr\u00f3xima sess\u00e3o para ' + codigos.length +
               (codigos.length === 1 ? ' c\u00f3digo.' : ' c\u00f3digos.'), 3500);
     }
 
@@ -4545,8 +4550,8 @@ function salvarListaPersonalizada() {
                     _verificarAlertasListaPersonalizada();
                 } else {
                     toast(
-                        'Banco/rede lento \u2014 ainda sincronizando o estoque dos c\u00f3digos rec\u00e9m-salvos. ' +
-                        'Os alertas da lista personalizada v\u00e3o ser checados de novo em instantes.',
+                        'O banco ou a rede est\u00e1 lento; a sincroniza\u00e7\u00e3o do estoque dos c\u00f3digos rec\u00e9m-salvos ainda est\u00e1 em andamento. ' +
+                        'Os alertas da lista personalizada ser\u00e3o verificados novamente em instantes.',
                         6000
                     );
                     // Uma única nova tentativa, mais adiante — cobre o caso comum
@@ -5273,7 +5278,7 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
             if (lpAtiva) {
                 msg += ' \u2014 lista personalizada (c\u00f3digos n\u00e3o marcados como usados)';
             } else if (reaproveitarAtivo) {
-                msg += ' \u2014 reaproveitando c\u00f3digos (s\u00f3 marca como usado quando esgotar)';
+                msg += ' \u2014 reaproveitando c\u00f3digos (marcados como usados apenas ao esgotar o saldo)';
                 if (codsMarcados.length > 0) msg += ' \u2014 clique em "Copiar resultado" para confirmar';
             } else if (codsMarcados.length > 0) {
                 msg += ' \u2014 clique em "Copiar resultado" para confirmar';
@@ -5424,13 +5429,13 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
                     _temConsumoNestaExecucao = true;
                     _linhasItensScroll.push(
                         '\u2022 ' + it.codigo + ' \u2014 ' + it.descricao +
-                        ' (usado ' + usos + 'x em linha(s) anterior(es) desta mesma lista)'
+                        ' (usado ' + usos + 'x em linha(s) anterior(es) desta lista)'
                     );
                 } else {
                     _temLimiteJaAtingido = true;
                     _linhasItensScroll.push(
                         '\u2022 ' + it.codigo + ' \u2014 ' + it.descricao +
-                        ' (j\u00e1 estava no limite antes de come\u00e7ar este processamento)'
+                        ' (j\u00e1 estava no limite antes do in\u00edcio deste processamento)'
                     );
                 }
             });
@@ -5438,19 +5443,19 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
             var _explicacaoMotivos = 'Motivo de cada item:';
             if (_temConsumoNestaExecucao) {
                 _explicacaoMotivos +=
-                    '\\n\\u2014 "usado Nx" = j\u00e1 foi consumido em linha(s) anterior(es) desta mesma execu\u00e7\u00e3o ' +
-                    '(o estoque real no banco N\u00c3O mudou \u2014 esta ferramenta nunca escreve no Firebird; ' +
-                    '\u00e9 s\u00f3 um contador interno pra n\u00e3o sugerir mais unidades do que sobra de verdade).';
+                    '\\n\\u2014 "usado Nx": j\u00e1 foi consumido em linha(s) anterior(es) desta execu\u00e7\u00e3o ' +
+                    '(o estoque real no banco N\u00c3O foi alterado, pois esta ferramenta nunca grava no Firebird; ' +
+                    'trata-se apenas de um contador interno para n\u00e3o sugerir mais unidades do que as dispon\u00edveis).';
             }
             if (_temLimiteJaAtingido) {
                 _explicacaoMotivos +=
-                    '\\n\\u2014 "j\u00e1 estava no limite" = estoque de parada (ou zero) atingido desde ANTES deste processamento come\u00e7ar.';
+                    '\\n\\u2014 "j\u00e1 estava no limite": o estoque de parada (ou zero) j\u00e1 havia sido atingido ANTES do in\u00edcio deste processamento.';
             }
 
             _modalConfirm(
                 'Linha: "' + pend.linha.trim() + '" \u2014 valor R$' + pend.valor.toFixed(2).replace('.', ',') +
-                '\\n\\nTentei todas as possibilidades (item sozinho, combina\u00e7\u00e3o com outros itens da lista, ' +
-                'e at\u00e9 combina\u00e7\u00f5es que excedem o valor pedido), mas nenhum resultado foi encontrado.' +
+                '\\n\\nTodas as possibilidades foram testadas (item isolado, combina\u00e7\u00e3o com outros itens da lista ' +
+                'e combina\u00e7\u00f5es que excedem o valor pedido), sem nenhum resultado.' +
                 '\\n\\n' + _explicacaoMotivos,
                 function() { // Sim — remove da lista personalizada
                     var _codsEsgotados = _esgotados.map(function(it) { return it.codigo; });
@@ -5472,7 +5477,7 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
                     okClass:     'btn btn-d btn-sm',
                     itensScroll: _linhasItensScroll,
                     msgApos:     'Deseja remover esse(s) item(ns) da lista personalizada agora? ' +
-                                 'Se preferir, cancele e resolva essa linha manualmente \u2014 ela fica marcada como [NAO ENCONTRADO].'
+                                 'Se preferir, cancele e resolva esta linha manualmente; ela permanecer\u00e1 marcada como [NAO ENCONTRADO].'
                 }
             );
         }
@@ -5522,7 +5527,7 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
                             return;
                         }
                         if (qtd === 0) {
-                            toast('O cat\u00e1logo do banco j\u00e1 est\u00e1 totalmente carregado \u2014 nada mais para buscar.', 5000);
+                            toast('O cat\u00e1logo do banco j\u00e1 est\u00e1 totalmente carregado; n\u00e3o h\u00e1 mais itens para buscar.', 5000);
                             btn.disabled = false;
                             return;
                         }
@@ -6153,9 +6158,9 @@ async function handleGetItens(req, res, json, erro) {
 
 async function handleMarcarUsado(req, res, json, erro) {
     let body;
-    try { body = await lerBody(req); } catch (e) { erro("Body inválido: " + e.message, 400); return; }
+    try { body = await lerBody(req); } catch (e) { erro("Corpo da requisição inválido: " + e.message, 400); return; }
     let parsed;
-    try { parsed = JSON.parse(body); } catch (_) { erro("JSON inválido.", 400); return; }
+    try { parsed = JSON.parse(body); } catch (_) { erro("Conteúdo JSON inválido.", 400); return; }
 
     // Cap de tamanho consistente com _sanitizarListaPersonalizada (50 chars):
     // sem isso, um POST malformado/malicioso com um "codigo" arbitrariamente
@@ -6163,7 +6168,7 @@ async function handleMarcarUsado(req, res, json, erro) {
     // usados-estoque.json sem limite — mesmo em rede interna, nada exige
     // aceitar uma chave de tamanho ilimitado num Object que vira JSON em disco.
     const codigo = String(parsed && parsed.codigo != null ? parsed.codigo : "").trim().slice(0, 50);
-    if (!codigo) { erro("Campo 'codigo' obrigatório.", 400); return; }
+    if (!codigo) { erro("O campo 'codigo' é obrigatório.", 400); return; }
 
     // Lookup O(1) via Set (substitui _itensBrutos.some(i => i.codigo === codigo))
     const existeNosBrutos = _codigosSet.has(codigo);
@@ -6203,10 +6208,10 @@ async function handleGetListaPersonalizada(req, res, json, erro) {
 // imediatamente — mesma filosofia de marcar-usado/resetar-usados.
 async function handlePostListaPersonalizada(req, res, json, erro) {
     let body;
-    try { body = await lerBody(req, 1024 * 64); } catch (e) { erro("Body inválido: " + e.message, 400); return; }
+    try { body = await lerBody(req, 1024 * 64); } catch (e) { erro("Corpo da requisição inválido: " + e.message, 400); return; }
     let parsed;
-    try { parsed = JSON.parse(body); } catch (_) { erro("JSON inválido.", 400); return; }
-    if (!parsed || !Array.isArray(parsed.itens)) { erro("Campo 'itens' (array) obrigatório.", 400); return; }
+    try { parsed = JSON.parse(body); } catch (_) { erro("Conteúdo JSON inválido.", 400); return; }
+    if (!parsed || !Array.isArray(parsed.itens)) { erro("O campo 'itens' (lista) é obrigatório.", 400); return; }
 
     const resultadoSanitizado = _sanitizarListaPersonalizada(parsed.itens);
     _listaPersonalizada = resultadoSanitizado.itens;
@@ -6248,7 +6253,7 @@ async function handlePostListaPersonalizada(req, res, json, erro) {
 
 async function handlePostAtualizar(req, res, json, erro) {
     if (_loadLock || _carregando) {
-        json({ ok: false, erro: "Já em carregamento. Aguarde." });
+        json({ ok: false, erro: "Já existe um carregamento em andamento. Aguarde." });
         return;
     }
     // Inicia ANTES de responder: carregarItens() liga _carregando de forma
@@ -6326,19 +6331,19 @@ async function handleGetConfig(req, res, json, erro) {
 // responde com o erro 400 apropriado) se algo for inválido.
 async function _lerEValidarPayloadConfig(req, erro) {
     let body;
-    try { body = await lerBody(req, 1024 * 64); } catch (e) { erro("Body inválido: " + e.message, 400); return null; }
+    try { body = await lerBody(req, 1024 * 64); } catch (e) { erro("Corpo da requisição inválido: " + e.message, 400); return null; }
     let parsed;
-    try { parsed = JSON.parse(body); } catch (_) { erro("JSON inválido.", 400); return null; }
-    if (!parsed || typeof parsed !== "object") { erro("Payload inválido.", 400); return null; }
+    try { parsed = JSON.parse(body); } catch (_) { erro("Conteúdo JSON inválido.", 400); return null; }
+    if (!parsed || typeof parsed !== "object") { erro("Dados da requisição inválidos.", 400); return null; }
 
     const novaPortaFb   = parseInt(parsed.fbPort       || String(DEFAULTS.fbPort), 10);
     const novaPortaHttp = parseInt(parsed.portaEstoque || String(PORTA), 10);
     const novoEstMin    = parsed.estoqueMinimo != null ? parseFloat(parsed.estoqueMinimo) : _cfgVivo.estoqueMinimo;
     const novoMaxItens  = parsed.maxItens      != null ? parseInt(parsed.maxItens, 10)    : _cfgVivo.maxItens;
-    if (!_portaValida(novaPortaFb, 1))                { erro("fbPort inv\u00e1lida (1\u2013" + PORTA_MAX + ").", 400); return null; }
-    if (!_portaValida(novaPortaHttp, PORTA_HTTP_MIN)) { erro("portaEstoque inv\u00e1lida (" + PORTA_HTTP_MIN + "\u2013" + PORTA_MAX + ").", 400); return null; }
-    if (!Number.isFinite(novoEstMin) || novoEstMin < 0 || novoEstMin > 9999)  { erro("estoqueMinimo inválido (0–9999).", 400); return null; }
-    if (!Number.isInteger(novoMaxItens) || novoMaxItens < 100 || novoMaxItens > MAX_ITENS_TETO)  { erro("maxItens inválido (100–" + MAX_ITENS_TETO + ").", 400); return null; }
+    if (!_portaValida(novaPortaFb, 1))                { erro("Porta do Firebird inv\u00e1lida (1\u2013" + PORTA_MAX + ").", 400); return null; }
+    if (!_portaValida(novaPortaHttp, PORTA_HTTP_MIN)) { erro("Porta HTTP inv\u00e1lida (" + PORTA_HTTP_MIN + "\u2013" + PORTA_MAX + ").", 400); return null; }
+    if (!Number.isFinite(novoEstMin) || novoEstMin < 0 || novoEstMin > 9999)  { erro("Estoque mínimo inválido (0–9999).", 400); return null; }
+    if (!Number.isInteger(novoMaxItens) || novoMaxItens < 100 || novoMaxItens > MAX_ITENS_TETO)  { erro("Máximo de itens inválido (100–" + MAX_ITENS_TETO + ").", 400); return null; }
 
     // Mesma normalização do navegador (engine): aceita texto em qualquer
     // separador, JSON ou array, e devolve o formato aceito.
@@ -6405,7 +6410,7 @@ async function handlePostConfig(req, res, json, erro) {
         _persistirConfig(novo);
         logTs("Config salvo: " + CONFIG_PATH);
     } catch (e) {
-        erro("Falha ao salvar config.json: " + e.message, 500);
+        erro("Falha ao salvar o config.json: " + e.message, 500);
         return;
     }
 
@@ -6491,7 +6496,7 @@ const server = http.createServer(async (req, res) => {
         try {
             body = typeof data === "string" ? data : JSON.stringify(data);
         } catch (e) {
-            body = JSON.stringify({ ok: false, erro: "Serializacao falhou: " + String(e.message || e) });
+            body = JSON.stringify({ ok: false, erro: "Falha ao serializar a resposta: " + String(e.message || e) });
             status = 500;
         }
         res.writeHead(status || 200, { "Content-Type": "application/json; charset=utf-8" });
