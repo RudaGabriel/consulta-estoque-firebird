@@ -965,3 +965,20 @@ describe("executavel/consola.js — painel do executável", () => {
         assert.ok(/Modo sempre ativo:.*LIGADO/.test(m.replace(/\u001b\[[0-9;]*m/g, "")));
     });
 });
+
+describe("varredura de rede não substitui o host definido pelo usuário", () => {
+    const srvMod = require("./consulta-estoque.js");
+
+    test("_hostEhDoUsuario: host configurado sem fbHostAuto é do usuário", () => {
+        assert.equal(srvMod._hostEhDoUsuario({ fbHost: "192.168.1.3" }), true);
+        assert.equal(srvMod._hostEhDoUsuario({ fbHost: "192.168.1.3", fbHostAuto: false }), true);
+    });
+    test("_hostEhDoUsuario: host adotado pela varredura (fbHostAuto) NÃO é do usuário", () => {
+        assert.equal(srvMod._hostEhDoUsuario({ fbHost: "100.121.18.95", fbHostAuto: true }), false);
+    });
+    test("_hostEhDoUsuario: sem host, a varredura é liberada (não é do usuário)", () => {
+        assert.equal(srvMod._hostEhDoUsuario({}), false);
+        assert.equal(srvMod._hostEhDoUsuario({ fbHost: "" }), false);
+        assert.equal(srvMod._hostEhDoUsuario({ fbHost: "   " }), false);
+    });
+});

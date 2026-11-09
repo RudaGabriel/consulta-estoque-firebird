@@ -5,20 +5,17 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.46.0
+ * @version 5.47.0
  * @changelog
- *   5.46.0 - 2026-11-09 - Painel do executável (menu no console) e modo
- *     sempre ativo (executavel/consola.js):
- *     [1] Menu interativo ao abrir o .exe: navegador, pasta de dados, atualizar,
- *         ver mensagens, alterar porta e o modo sempre ativo.
- *     [2] Modo sempre ativo, protegido por um código do usuário: inicia com o
- *         Windows (HKCU\\...\\Run, sem administrador), um guardião reabre o
- *         servidor se cair, e fechar a janela sem o código apenas a minimiza.
- *         Continua encerrável pelo Gerenciador de Tarefas e pelo código; o
- *         guardião nunca se reergue sozinho e para quando o código desliga o
- *         modo. Não bloqueia o sistema nem se esconde.
- *     [3] Registro em consulta-estoque.log e flags --sem-menu / --guardiao /
- *         --inicio-automatico. Fora do executável, nada muda.
+ *   5.47.0 - 2026-11-09 - A varredura de rede nunca mais troca um host definido
+ *     pelo usuário. Antes, qualquer falha de conexão (ex.: servidor da loja
+ *     fora do ar ou em outra rede) disparava a busca de Firebird na rede,
+ *     adotava o PRIMEIRO host encontrado e gravava no config.json — podendo
+ *     apontar para o banco errado. Agora a busca só roda quando NÃO há host
+ *     configurado (1ª execução); um host definido nas Configurações é mantido
+ *     e apenas re-tentado. Hosts adotados pela busca ganham a marca
+ *     fbHostAuto para que uma nova busca possa atualizá-los (IP de DHCP), e
+ *     salvar o host pela tela de Configurações limpa essa marca.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
  * NÃO depende de gerar-relatorio-html.js nem servidor-relatorio.js.
@@ -557,6 +554,18 @@ const SCAN_INTERVALO_MIN_MS = 5 * 60 * 1000;
 let _scanEmAndamento = false;
 let _ultimoScanMs    = 0;
 
+// Dispara a varredura apenas quando o host pode ser auto-detectado — ou seja,
+// quando NÃO há um host definido pelo usuário. Um host configurado por ele é
+// mantido e apenas re-tentado, sem varrer a rede nem trocar o config.json.
+function _agendarScanRedeSeAuto(motivo) {
+    if (_fbHostDoUsuario) {
+        logTs("Host " + _cfgVivo.fbHost + " definido nas configura\u00e7\u00f5es \u2014 mantido; " +
+              "a varredura de rede n\u00e3o troca o host (" + motivo + ").");
+        return;
+    }
+    _agendarScanRede();
+}
+
 function _agendarScanRede() {
     if (_scanEmAndamento) return;
     const agora = Date.now();
@@ -587,8 +596,9 @@ async function autoDetectarHost() {
     if (_cfgVivo) _cfgVivo.fbHost = hostEncontrado;
     // Persiste no config.json para não precisar escanear no próximo startup
     try {
-        _gravarJsonAtomicoSync(CONFIG_PATH, Object.assign(_lerConfigParaMerge(), { fbHost: hostEncontrado }));
-        logTs("config.json atualizado com fbHost=" + hostEncontrado);
+        _gravarJsonAtomicoSync(CONFIG_PATH, Object.assign(_lerConfigParaMerge(), { fbHost: hostEncontrado, fbHostAuto: true }));
+        if (_cfgVivo) _cfgVivo.fbHostAuto = true;
+        logTs("config.json atualizado com fbHost=" + hostEncontrado + " (detectado automaticamente)");
     } catch (e) {
         logErro("AVISO: falha ao salvar config.json ap\u00f3s scan: " + e.message);
     }
@@ -675,6 +685,18 @@ let _cfgVivo = {
     // Aceita array ou texto (ex.: "A, B; C") no config.json — sempre normalizado.
     proibidosExtra: cfg.proibidos != null ? _engine._normalizarListaProibidos(cfg.proibidos).termos : []
 };
+
+// Host definido pelo USUÁRIO (config.json com fbHost e sem a marca fbHostAuto)
+// nunca é substituído pela varredura de rede. A marca fbHostAuto=true só é
+// gravada quando a própria varredura adota um host — aí uma nova varredura pode
+// atualizá-lo (ex.: IP mudou no DHCP). Hosts antigos, sem a marca, contam como
+// definidos pelo usuário: a varredura os respeita.
+// Pura: um host conta como "do usuário" quando o config tem fbHost e NÃO está
+// marcado com fbHostAuto. Exportada para teste.
+function _hostEhDoUsuario(conf) {
+    return !!(conf && conf.fbHost && String(conf.fbHost).trim()) && conf.fbHostAuto !== true;
+}
+let _fbHostDoUsuario = _hostEhDoUsuario(cfg);
 
 // ── AVISO DE SEGURANÇA: credencial padrão em uso ──────────────────────────────
 // Achado de auditoria: DEFAULTS.fbPassword é o usuário/senha padrão de
@@ -1362,7 +1384,7 @@ async function _executarCarga(gen) {
     const con = await _conectarFirebird(conf);
     if (con.e) {
         _encerrarCarga(gen, (con.sincrono ? "Erro ao iniciar conexão: " : "Falha na conexão: ") + _mensagemErro(con.e));
-        if (!con.sincrono) _agendarScanRede();
+        if (!con.sincrono) _agendarScanRedeSeAuto("falha de conex\u00e3o");
         return false;
     }
 
@@ -1478,7 +1500,7 @@ async function carregarItens() {
                 _encerrarCarga(gen, "Timeout ao carregar dados do Firebird (" + Math.round(CONEXAO_TIMEOUT_MS / 1000) +
                     "s) — conexão, detecção de tabela e consultas juntas demoraram mais que isso; " +
                     "host/porta inacessível OU banco/rede muito lento.");
-                _agendarScanRede();
+                _agendarScanRedeSeAuto("timeout de carga");
             }
             resolve(false);
         }, CONEXAO_TIMEOUT_MS);
@@ -6426,6 +6448,9 @@ function _persistirConfig(novo) {
         proibidos:      novo.proibidosExtra
     });
 
+    // Host informado na tela de Configurações é escolha do usuário: limpa a
+    // marca de auto-detecção, para a varredura nunca mais substituí-lo.
+    if (cfgNovo.fbHost && String(cfgNovo.fbHost).trim()) cfgNovo.fbHostAuto = false;
     _gravarJsonAtomicoSync(CONFIG_PATH, cfgNovo); // pode lançar — chamador trata
 }
 
@@ -6450,6 +6475,7 @@ async function handlePostConfig(req, res, json, erro) {
         fbPassword: novo.fbPassword, portaEstoque: novo.portaEstoque, appName: novo.appName,
         estoqueMinimo: novo.estoqueMinimo, maxItens: novo.maxItens, proibidosExtra: novo.proibidosExtra
     });
+    if (novo.fbHost && String(novo.fbHost).trim()) { _cfgVivo.fbHostAuto = false; _fbHostDoUsuario = true; }
 
     // Invalida cache do HTML se o nome da app, estoque mínimo, maxItens ou a
     // lista de proibidos mudou (o cliente usa _S.proibidosExtra na
@@ -6765,9 +6791,9 @@ function iniciarServidor() {
             }
             logTs("AVISO: Dados n\u00e3o carregados. Causa: " + (_erroConexao || "desconhecida"));
             logTs("A interface est\u00e1 dispon\u00edvel \u2014 use o bot\u00e3o 'Atualizar' ap\u00f3s corrigir a conex\u00e3o.");
-            // Sem fbHost no config.json e sem FDB local: tenta descobrir na rede
-            // (_agendarScanRede ignora se a falha de conexão já disparou um).
-            if (!cfg.fbHost) _agendarScanRede();
+            // Sem host definido pelo usuário (1ª execução): tenta descobrir na rede.
+            // Um host configurado é mantido e só re-tentado, nunca substituído.
+            _agendarScanRedeSeAuto("startup");
         });
     });
 }
@@ -6789,6 +6815,7 @@ module.exports = {
     _valorColunaIndicaInativo,
     _formasBuscaCodigos,
     _reconciliarListaPersonalizada,
+    _hostEhDoUsuario,
     _processarLinhasPrincipais,
     _mapearColunas,
     _montarSqlPrincipal,
