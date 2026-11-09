@@ -9,7 +9,7 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.48.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.49.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.30.1**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.10.0**.
@@ -24,6 +24,25 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.49.0 (2026-11-09)
+
+```text
+Descoberta automática do banco: o sistema acha
+  sozinho ONDE está o banco do Small Commerce (servidor + caminho do .FDB)
+  e conecta, sem editar nada. Quando o banco configurado não abre:
+  [1] Firebird desta máquina ativo: procura arquivos .FDB no disco (todas
+      as unidades, com limite de profundidade e tempo; SMALL.FDB primeiro,
+      depois o modificado mais recentemente) e tenta caminhos conhecidos.
+  [2] Servidor configurado (remoto): tenta outros caminhos conhecidos e
+      aliases do Firebird (SMALL, SMALLCOMMERCE).
+  [3] Rede: varre TODAS as placas úteis (LAN, depois Tailscale), ignorando
+      endereços link-local 169.254 (APIPA) — antes pegava a primeira placa.
+  Só adota um banco que ABRE e tem a tabela de produtos do Small Commerce
+  (nunca security3.fdb, employee.fdb ou outro banco qualquer). Grava host
+  e caminho no config.json. Se o banco existe mas a senha não confere,
+  avisa. Para travar o host e desligar a correção, "fbHostFixo": true.
+```
 
 ### 5.48.0 (2026-11-09)
 

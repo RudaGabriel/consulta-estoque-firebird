@@ -966,20 +966,23 @@ describe("executavel/consola.js — painel do executável", () => {
     });
 });
 
-describe("varredura de rede não substitui o host definido pelo usuário", () => {
+describe("correção automática do host (busca liberada por padrão)", () => {
     const srvMod = require("./consulta-estoque.js");
 
-    test("_hostEhDoUsuario: host configurado sem fbHostAuto é do usuário", () => {
+    test("_buscaAutomaticaLiberada: liberada por padrão, mesmo com host configurado", () => {
+        assert.equal(srvMod._buscaAutomaticaLiberada({ fbHost: "192.168.1.3" }), true);
+        assert.equal(srvMod._buscaAutomaticaLiberada({}), true);
+        assert.equal(srvMod._buscaAutomaticaLiberada(null), true);
+    });
+    test("_buscaAutomaticaLiberada: bloqueada só com fbHostFixo = true", () => {
+        assert.equal(srvMod._buscaAutomaticaLiberada({ fbHost: "192.168.1.3", fbHostFixo: true }), false);
+        assert.equal(srvMod._buscaAutomaticaLiberada({ fbHostFixo: false }), true);
+        assert.equal(srvMod._buscaAutomaticaLiberada({ fbHostFixo: 1 }), true); // só o booleano true trava
+    });
+    test("_hostEhDoUsuario: continua distinguindo host do usuário de host auto-detectado", () => {
         assert.equal(srvMod._hostEhDoUsuario({ fbHost: "192.168.1.3" }), true);
-        assert.equal(srvMod._hostEhDoUsuario({ fbHost: "192.168.1.3", fbHostAuto: false }), true);
-    });
-    test("_hostEhDoUsuario: host adotado pela varredura (fbHostAuto) NÃO é do usuário", () => {
         assert.equal(srvMod._hostEhDoUsuario({ fbHost: "100.121.18.95", fbHostAuto: true }), false);
-    });
-    test("_hostEhDoUsuario: sem host, a varredura é liberada (não é do usuário)", () => {
-        assert.equal(srvMod._hostEhDoUsuario({}), false);
         assert.equal(srvMod._hostEhDoUsuario({ fbHost: "" }), false);
-        assert.equal(srvMod._hostEhDoUsuario({ fbHost: "   " }), false);
     });
 });
 
@@ -999,5 +1002,77 @@ describe("scan adota só um host onde o banco abre (_primeiroHostQueAbre)", () =
             return h === "bom";
         });
         assert.equal(r, "bom");
+    });
+});
+
+describe("descoberta automática do banco", () => {
+    const srvMod = require("./consulta-estoque.js");
+
+    test("_classificarRedes ignora link-local 169.254 e prefere a LAN", () => {
+        const ifaces = {
+            "Ethernet 2": [{ family: "IPv4", address: "169.254.83.10", internal: false }],
+            "Tailscale":  [{ family: "IPv4", address: "100.121.18.4",  internal: false }],
+            "Wi-Fi":      [{ family: "IPv4", address: "192.168.1.50",  internal: false },
+                           { family: "IPv6", address: "fe80::1",       internal: false }],
+            "Loopback":   [{ family: "IPv4", address: "127.0.0.1",     internal: true }]
+        };
+        assert.deepEqual(srvMod._classificarRedes(ifaces), ["192.168.1", "100.121.18"]);
+    });
+
+    test("_classificarRedes aceita family numérico e descarta endereços inválidos", () => {
+        const ifaces = { a: [{ family: 4, address: "10.0.0.7", internal: false },
+                             { family: "IPv4", address: "999.1.1.1", internal: false }] };
+        assert.deepEqual(srvMod._classificarRedes(ifaces), ["10.0.0"]);
+        assert.deepEqual(srvMod._classificarRedes({}), []);
+        assert.deepEqual(srvMod._classificarRedes(null), []);
+    });
+
+    test("_buscarArquivosFdbLocais acha SMALL.FDB e ignora bancos do Firebird", async () => {
+        const raiz = fs.mkdtempSync(path.join(require("os").tmpdir(), "fdb-"));
+        const mk = (rel) => { const f = path.join(raiz, rel); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, "x"); return f; };
+        mk("Firebird/security3.fdb");
+        mk("Firebird/examples/employee.fdb");
+        mk("Outros/backup/VELHO.FDB");
+        const alvo = mk("Clientes/SmallSoft/Small Commerce/SMALL.FDB");
+        const achados = await srvMod._buscarArquivosFdbLocais([raiz], { prazoMs: 5000 });
+        assert.equal(achados[0], alvo, "SMALL.FDB vem primeiro");
+        assert.ok(!achados.some(a => /security3|employee/i.test(a)), "bancos do Firebird são ignorados");
+        assert.ok(achados.some(a => /VELHO\.FDB$/.test(a)), "outros .FDB entram depois");
+    });
+
+    test("_buscarArquivosFdbLocais respeita a profundidade máxima", async () => {
+        const raiz = fs.mkdtempSync(path.join(require("os").tmpdir(), "fdb-"));
+        const fundo = path.join(raiz, "a", "b", "c", "d");
+        fs.mkdirSync(fundo, { recursive: true });
+        fs.writeFileSync(path.join(fundo, "SMALL.FDB"), "x");
+        assert.deepEqual(await srvMod._buscarArquivosFdbLocais([raiz], { maxProf: 2 }), []);
+        assert.equal((await srvMod._buscarArquivosFdbLocais([raiz], { maxProf: 6 })).length, 1);
+    });
+
+    test("_primeiraCombinacaoQueAbre devolve o par host+caminho que abre", async () => {
+        const combos = [
+            { host: "127.0.0.1", caminho: "C:\\errado.FDB" },
+            { host: "127.0.0.1", caminho: "D:\\Dados\\SMALL.FDB" },
+            { host: "192.168.1.3", caminho: "SMALL" }
+        ];
+        const r = await srvMod._primeiraCombinacaoQueAbre(combos,
+            (h, c) => Promise.resolve(c === "D:\\Dados\\SMALL.FDB" ? { ok: true } : { ok: false, motivo: "I/O error" }));
+        assert.deepEqual(r.combo, combos[1]);
+        assert.equal(r.falhas.length, 1);
+    });
+
+    test("_primeiraCombinacaoQueAbre registra falha de senha (auth) e não adota nada", async () => {
+        const r = await srvMod._primeiraCombinacaoQueAbre(
+            [{ host: "h", caminho: "c" }],
+            () => Promise.resolve({ ok: false, auth: true, motivo: "Your user name and password are not defined" }));
+        assert.equal(r.combo, null);
+        assert.equal(r.falhas[0].auth, true);
+    });
+
+    test("_caminhosConhecidos não repete caminhos e inclui aliases", () => {
+        const lista = srvMod._caminhosConhecidos();
+        assert.equal(new Set(lista.map(c => c.toUpperCase())).size, lista.length);
+        assert.ok(lista.includes("SMALL"));
+        assert.ok(lista.some(c => /Program Files \(x86\)\\SmallSoft\\Small Commerce\\SMALL\.FDB$/i.test(c)));
     });
 });
