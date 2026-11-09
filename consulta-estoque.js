@@ -5,22 +5,22 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.49.0
+ * @version 5.50.0
  * @changelog
- *   5.49.0 - 2026-11-09 - Descoberta automática do banco: o sistema acha
- *     sozinho ONDE está o banco do Small Commerce (servidor + caminho do .FDB)
- *     e conecta, sem editar nada. Quando o banco configurado não abre:
- *     [1] Firebird desta máquina ativo: procura arquivos .FDB no disco (todas
- *         as unidades, com limite de profundidade e tempo; SMALL.FDB primeiro,
- *         depois o modificado mais recentemente) e tenta caminhos conhecidos.
- *     [2] Servidor configurado (remoto): tenta outros caminhos conhecidos e
- *         aliases do Firebird (SMALL, SMALLCOMMERCE).
- *     [3] Rede: varre TODAS as placas úteis (LAN, depois Tailscale), ignorando
- *         endereços link-local 169.254 (APIPA) — antes pegava a primeira placa.
- *     Só adota um banco que ABRE e tem a tabela de produtos do Small Commerce
- *     (nunca security3.fdb, employee.fdb ou outro banco qualquer). Grava host
- *     e caminho no config.json. Se o banco existe mas a senha não confere,
- *     avisa. Para travar o host e desligar a correção, "fbHostFixo": true.
+ *   5.50.0 - 2026-11-09 - Descoberta do banco mais segura e rápida:
+ *     [1] Servidor fora do ar é descartado na hora: antes de testar caminhos,
+ *         confere a porta; sem resposta, os demais caminhos dele são pulados
+ *         (antes, ~15 s por caminho — vários minutos no total).
+ *     [2] Nunca troca um SERVIDOR configurado por uma cópia de backup: um banco
+ *         desta máquina só o substitui se estiver em uso agora (alterado nos
+ *         últimos 30 min). Cópias paradas (ex.: H:\cd2024_, H:\outros) são
+ *         ignoradas e listadas no log.
+ *     [3] Com servidor configurado, procura-o primeiro em outro IP da rede
+ *         (DHCP) e só depois nesta máquina.
+ *     [4] Unidades de rede e de CD/DVD não entram na busca em disco (abrir um
+ *         .FDB por compartilhamento pode corromper o banco).
+ *     [5] Mensagem clara quando o servidor não responde; a configuração atual
+ *         é mantida.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
  * NÃO depende de gerar-relatorio-html.js nem servidor-relatorio.js.
@@ -590,13 +590,18 @@ async function _primeiroHostQueAbre(hosts, probe) {
 async function _primeiraCombinacaoQueAbre(combos, probe, prazoMs) {
     const limite = Date.now() + (prazoMs || 90000);
     const falhas = [];
+    const inacessiveis = new Set();
     for (const c of (combos || [])) {
         if (Date.now() > limite) break;
+        // Servidor que não respondeu na porta: nenhum outro caminho vai funcionar.
+        if (inacessiveis.has(c.host)) continue;
         let r = null;
         try { r = await probe(c.host, c.caminho); }
         catch (e) { r = { ok: false, motivo: String((e && e.message) || e) }; }
         if (r && r.ok) return { combo: c, falhas };
-        falhas.push({ host: c.host, caminho: c.caminho, motivo: (r && r.motivo) || "", auth: !!(r && r.auth) });
+        if (r && r.inacessivel) inacessiveis.add(c.host);
+        falhas.push({ host: c.host, caminho: c.caminho, motivo: (r && r.motivo) || "",
+                      auth: !!(r && r.auth), inacessivel: !!(r && r.inacessivel) });
     }
     return { combo: null, falhas };
 }
@@ -604,7 +609,15 @@ async function _primeiraCombinacaoQueAbre(combos, probe, prazoMs) {
 // Tenta abrir o banco `caminho` no `host` e confirma que é um banco do Small
 // Commerce (tem a tabela de produtos). Resolve { ok, auth, motivo }; auth=true
 // quando o banco existe mas o usuário/senha do Firebird não conferem.
-function _bancoAbreEm(host, caminho) {
+async function _bancoAbreEm(host, caminho) {
+    const porta = _cfgVivo ? _cfgVivo.fbPort : 3050;
+    let aberta = false;
+    try { aberta = await _portaAberta(host, porta, 1500); } catch (_) {}
+    if (!aberta) return { ok: false, inacessivel: true, motivo: "servidor n\u00e3o respondeu na porta " + porta };
+    return _abrirBancoEValidar(host, caminho);
+}
+
+function _abrirBancoEValidar(host, caminho) {
     return new Promise(resolve => {
         const conf = Object.assign({}, _cfgVivo, { fbHost: host, fbPath: caminho });
         let feito = false;
@@ -674,6 +687,46 @@ function _unidadesLocais() {
     return out;
 }
 
+// Unidades onde é seguro procurar: exclui unidades de REDE (abrir um .FDB por
+// compartilhamento pode corromper o banco) e de CD/DVD. Consulta o tipo de cada
+// unidade uma vez, via PowerShell sem janela; se falhar, usa todas e conta com a
+// proteção do próprio Firebird, que recusa abrir arquivos de rede.
+function _unidadesLocaisSeguras() {
+    return new Promise(resolve => {
+        const todas = _unidadesLocais();
+        if (process.platform !== "win32" || !todas.length) return resolve(todas);
+        try {
+            const { execFile } = require("child_process");
+            const ps = "Get-CimInstance Win32_LogicalDisk | ForEach-Object { $_.DeviceID + '|' + $_.DriveType }";
+            const cod = Buffer.from(ps, "utf16le").toString("base64");
+            execFile("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", cod],
+                { windowsHide: true, timeout: 10000 }, (err, stdout) => {
+                    if (err || !stdout) return resolve(todas);
+                    const bloquear = new Set();
+                    String(stdout).split(/\r?\n/).forEach(l => {
+                        const m = /^([A-Z]):\|(\d+)/i.exec(l.trim());
+                        if (m && (m[2] === "4" || m[2] === "5")) bloquear.add(m[1].toUpperCase());
+                    });
+                    if (bloquear.size) logTs("Busca: unidades de rede/CD ignoradas: " + Array.from(bloquear).join(": ") + ":");
+                    resolve(todas.filter(r => !bloquear.has(r.charAt(0).toUpperCase())));
+                });
+        } catch (_) { resolve(todas); }
+    });
+}
+
+// Uma cópia local só pode substituir um SERVIDOR configurado se estiver em uso
+// agora, isto é, alterada nos últimos 30 minutos (o banco em uso é alterado a
+// cada venda). Cópias de backup, paradas há horas ou dias, são ignoradas: nunca
+// mostrar estoque desatualizado.
+const FRESCOR_LOCAL_MS = 30 * 60 * 1000;
+
+// Puro: arquivos alterados dentro da janela, do mais recente ao mais antigo.
+function _locaisEmUso(detalhes, agora, janelaMs) {
+    return (detalhes || [])
+        .filter(d => d && Number.isFinite(d.mtime) && agora - d.mtime <= janelaMs)
+        .sort((a, b) => b.mtime - a.mtime);
+}
+
 // Pastas que nunca têm o banco do Small Commerce (ou são do próprio sistema).
 const _PASTAS_IGNORADAS = new Set([
     "windows", "$recycle.bin", "system volume information", "recovery", "perflogs",
@@ -725,7 +778,9 @@ async function _buscarArquivosFdbLocais(raizes, opcoes) {
         if (sa !== sb) return sa - sb;
         return b.mtime - a.mtime;
     });
-    return achados.map(a => a.caminho);
+    return opcoes.comDetalhes
+        ? achados.map(a => ({ caminho: a.caminho, mtime: a.mtime }))
+        : achados.map(a => a.caminho);
 }
 
 // Scan de rede: no máximo UM por vez e com intervalo mínimo entre scans. Antes,
@@ -766,78 +821,112 @@ function _agendarScanRede() {
 }
 
 // Descobre sozinho onde está o banco (servidor + caminho do .FDB) e conecta.
-// Ordem de tentativa (do mais provável e rápido ao mais caro):
-//   (1) o servidor configurado, com outros caminhos conhecidos (às vezes só o
-//       caminho está errado);
-//   (2) o Firebird DESTA máquina: arquivos .FDB achados no disco e caminhos
-//       conhecidos;
-//   (3) os servidores Firebird da rede local, em todas as placas úteis (sem
-//       169.254 link-local), com os caminhos conhecidos.
-// Adota a primeira combinação em que o banco abre e tem a tabela de produtos.
+// Só adota uma combinação em que o banco ABRE e tem a tabela de produtos.
+//
+// Com um SERVIDOR remoto configurado (ex.: 192.168.1.50):
+//   (A) o próprio servidor, com outros caminhos conhecidos — mas só se ele
+//       responder na porta (servidor fora do ar é descartado na hora);
+//   (B) o servidor em OUTRO endereço da rede (ex.: IP mudou no DHCP);
+//   (C) por último, um banco DESTA máquina, e apenas se estiver em uso agora
+//       (alterado nos últimos 30 min). Cópias de backup são ignoradas, para
+//       nunca trocar o servidor por um estoque desatualizado.
+// Sem servidor configurado (ou configurado nesta máquina):
+//   (C) bancos desta máquina primeiro (o mais recente), depois (B) a rede.
+// Unidades de rede e CD nunca entram na busca em disco.
 // Use _agendarScanRede() em vez de chamar direto (controle de concorrência).
 async function autoDetectarBanco() {
     const PORTA_FB = _cfgVivo ? _cfgVivo.fbPort : 3050;
-    const hostAtual = _cfgVivo ? _cfgVivo.fbHost : "";
+    const hostAtual = _cfgVivo ? String(_cfgVivo.fbHost || "").trim() : "";
     const conhecidos = _caminhosConhecidos();
     const ehLocal = h => h === "127.0.0.1" || h === "localhost" || h === "::1";
+    const configRemota = !!hostAtual && !ehLocal(hostAtual);
     const vistos = new Set();
-    const combos = [];
     const adicionar = (lista, host, caminho) => {
         const k = host + "|" + String(caminho).toUpperCase();
         if (vistos.has(k)) return;
         vistos.add(k);
         lista.push({ host, caminho });
     };
+    let falhas = [];
+    let achado = null;
+    const tentar = async (combos, prazoMs) => {
+        if (achado || !combos.length) return;
+        const r = await _primeiraCombinacaoQueAbre(combos, _bancoAbreEm, prazoMs);
+        falhas = falhas.concat(r.falhas);
+        if (r.combo) achado = r.combo;
+    };
 
-    // (1) Servidor configurado (remoto): talvez só o caminho esteja errado.
-    if (hostAtual && !ehLocal(hostAtual)) {
+    // (A) Servidor configurado: talvez só o caminho esteja errado.
+    if (configRemota) {
+        const combos = [];
         for (const c of conhecidos) adicionar(combos, hostAtual, c);
+        await tentar(combos, 60000);
     }
 
-    // (2) Firebird desta máquina.
-    let localAtivo = false;
-    try { localAtivo = await _portaAberta("127.0.0.1", PORTA_FB, 800); } catch (_) {}
-    if (localAtivo) {
-        logTs("Busca: Firebird ativo nesta máquina — procurando o arquivo .FDB no disco...");
-        let noDisco = [];
-        try { noDisco = await _buscarArquivosFdbLocais(_unidadesLocais()); } catch (_) {}
-        if (noDisco.length) {
-            logTs("Busca: .FDB encontrado(s) no disco: " + noDisco.slice(0, 5).join(" | ") +
-                  (noDisco.length > 5 ? " ..." : ""));
-        }
-        for (const c of noDisco) adicionar(combos, "127.0.0.1", c);
-        for (const c of conhecidos) adicionar(combos, "127.0.0.1", c);
-    }
-
-    let r = await _primeiraCombinacaoQueAbre(combos, _bancoAbreEm, 90000);
-    let falhas = r.falhas;
-
-    // (3) Rede local, se ainda não achou.
-    if (!r.combo) {
+    // (B) Servidores Firebird da rede.
+    const faseRede = async () => {
+        if (achado) return;
         const { networkInterfaces } = require("os");
         const bases = _classificarRedes(networkInterfaces()).slice(0, 3);
-        if (!bases.length) logTs("AVISO busca: nenhuma rede local utilizável encontrada.");
-        const combosRede = [];
+        if (!bases.length) { logTs("AVISO busca: nenhuma rede local utilizável encontrada."); return; }
+        const combos = [];
         for (const base of bases) {
             const hosts = await _escanearSubnet(PORTA_FB, base, 10);
             for (const h of hosts) {
                 if (ehLocal(h)) continue;
-                for (const c of conhecidos) adicionar(combosRede, h, c);
+                for (const c of conhecidos) adicionar(combos, h, c);
             }
         }
-        if (combosRede.length) {
-            const hostsRede = Array.from(new Set(combosRede.map(x => x.host)));
-            logTs("Busca: testando o banco em " + hostsRede.join(", ") + "...");
-            r = await _primeiraCombinacaoQueAbre(combosRede, _bancoAbreEm, 120000);
-            falhas = falhas.concat(r.falhas);
+        if (combos.length) {
+            logTs("Busca: testando o banco em " + Array.from(new Set(combos.map(x => x.host))).join(", ") + "...");
+            await tentar(combos, 120000);
         }
-    }
+    };
 
-    if (!r.combo) {
+    // (C) Bancos desta máquina.
+    const faseLocal = async () => {
+        if (achado) return;
+        let localAtivo = false;
+        try { localAtivo = await _portaAberta("127.0.0.1", PORTA_FB, 800); } catch (_) {}
+        if (!localAtivo) return;
+        logTs("Busca: Firebird ativo nesta máquina — procurando o arquivo .FDB no disco...");
+        let detalhes = [];
+        try {
+            detalhes = await _buscarArquivosFdbLocais(await _unidadesLocaisSeguras(), { comDetalhes: true });
+        } catch (_) {}
+        let usar = detalhes;
+        if (configRemota) {
+            usar = _locaisEmUso(detalhes, Date.now(), FRESCOR_LOCAL_MS);
+            const ignorados = detalhes.filter(d => usar.indexOf(d) === -1);
+            if (ignorados.length) {
+                logTs("Busca: cópias locais ignoradas (sem uso recente, provável backup): " +
+                      ignorados.slice(0, 5).map(d => d.caminho).join(" | ") + (ignorados.length > 5 ? " ..." : ""));
+            }
+        }
+        if (usar.length) {
+            logTs("Busca: banco(s) candidato(s) nesta máquina: " +
+                  usar.slice(0, 5).map(d => d.caminho).join(" | ") + (usar.length > 5 ? " ..." : ""));
+        }
+        const combos = [];
+        for (const d of usar) adicionar(combos, "127.0.0.1", d.caminho);
+        if (!configRemota) for (const c of conhecidos) adicionar(combos, "127.0.0.1", c);
+        await tentar(combos, 90000);
+    };
+
+    if (configRemota) { await faseRede(); await faseLocal(); }
+    else { await faseLocal(); await faseRede(); }
+
+    if (!achado) {
         const comAuth = falhas.find(f => f.auth);
+        const servidorFora = configRemota && falhas.some(f => f.host === hostAtual && f.inacessivel);
         if (comAuth) {
             logTs("AVISO busca: o banco foi encontrado em " + comAuth.host + " (" + comAuth.caminho +
                   "), mas o usuário/senha do Firebird não conferem. Ajuste em Configurações.");
+        } else if (servidorFora) {
+            logTs("AVISO busca: o servidor " + hostAtual + " não respondeu na porta " + PORTA_FB +
+                  " e o banco não foi encontrado em outro servidor da rede. Verifique se o servidor do " +
+                  "Small Commerce está ligado e acessível por esta máquina (mesma rede ou VPN). " +
+                  "A configuração atual foi mantida.");
         } else {
             logTs("AVISO busca: não encontrei o banco do Small Commerce em nenhum servidor acessível. " +
                   "Verifique se o servidor do Small Commerce está ligado e acessível por esta máquina.");
@@ -845,8 +934,8 @@ async function autoDetectarBanco() {
         return;
     }
 
-    const host = r.combo.host;
-    const caminho = r.combo.caminho;
+    const host = achado.host;
+    const caminho = achado.caminho;
     if (_cfgVivo.fbHost === host && _cfgVivo.fbPath === caminho) {
         logTs("Busca: banco já configurado (" + host + ":" + caminho + ") — sem mudança.");
         return;
@@ -7127,6 +7216,7 @@ module.exports = {
     _classificarRedes,
     _buscarArquivosFdbLocais,
     _caminhosConhecidos,
+    _locaisEmUso,
     _processarLinhasPrincipais,
     _mapearColunas,
     _montarSqlPrincipal,

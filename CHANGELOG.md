@@ -9,7 +9,7 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.49.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.50.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.30.1**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.10.0**.
@@ -24,6 +24,25 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.50.0 (2026-11-09)
+
+```text
+Descoberta do banco mais segura e rápida:
+  [1] Servidor fora do ar é descartado na hora: antes de testar caminhos,
+      confere a porta; sem resposta, os demais caminhos dele são pulados
+      (antes, ~15 s por caminho — vários minutos no total).
+  [2] Nunca troca um SERVIDOR configurado por uma cópia de backup: um banco
+      desta máquina só o substitui se estiver em uso agora (alterado nos
+      últimos 30 min). Cópias paradas (ex.: H:\cd2024_, H:\outros) são
+      ignoradas e listadas no log.
+  [3] Com servidor configurado, procura-o primeiro em outro IP da rede
+      (DHCP) e só depois nesta máquina.
+  [4] Unidades de rede e de CD/DVD não entram na busca em disco (abrir um
+      .FDB por compartilhamento pode corromper o banco).
+  [5] Mensagem clara quando o servidor não responde; a configuração atual
+      é mantida.
+```
 
 ### 5.49.0 (2026-11-09)
 

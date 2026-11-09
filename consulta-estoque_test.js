@@ -1076,3 +1076,51 @@ describe("descoberta automática do banco", () => {
         assert.ok(lista.some(c => /Program Files \(x86\)\\SmallSoft\\Small Commerce\\SMALL\.FDB$/i.test(c)));
     });
 });
+
+describe("descoberta: servidor fora do ar e cópias de backup", () => {
+    const srvMod = require("./consulta-estoque.js");
+
+    test("servidor que não responde: os outros caminhos dele são pulados", async () => {
+        const chamadas = [];
+        const combos = [
+            { host: "192.168.1.50", caminho: "C:\\a.FDB" },
+            { host: "192.168.1.50", caminho: "C:\\b.FDB" },
+            { host: "192.168.1.50", caminho: "SMALL" },
+            { host: "192.168.1.60", caminho: "C:\\a.FDB" }
+        ];
+        const r = await srvMod._primeiraCombinacaoQueAbre(combos, (h, c) => {
+            chamadas.push(h + "|" + c);
+            if (h === "192.168.1.50") return Promise.resolve({ ok: false, inacessivel: true, motivo: "porta" });
+            return Promise.resolve({ ok: true });
+        });
+        assert.deepEqual(r.combo, combos[3]);
+        assert.equal(chamadas.filter(x => x.startsWith("192.168.1.50")).length, 1, "só 1 tentativa no servidor fora do ar");
+        assert.equal(r.falhas[0].inacessivel, true);
+    });
+
+    test("_locaisEmUso: só cópias alteradas dentro da janela, da mais recente à mais antiga", () => {
+        const agora = 1_000_000_000;
+        const min = 60 * 1000;
+        const det = [
+            { caminho: "H:\\cd2024_\\SMALL.FDB", mtime: agora - 300 * 24 * 60 * min },
+            { caminho: "H:\\Small Commerce\\SMALL.FDB", mtime: agora - 2 * min },
+            { caminho: "H:\\CUPOM ATUAL\\SMALL.FDB", mtime: agora - 5 * 60 * min },
+            { caminho: "C:\\Dados\\SMALL.FDB", mtime: agora - 10 * min }
+        ];
+        const r = srvMod._locaisEmUso(det, agora, 30 * min);
+        assert.deepEqual(r.map(d => d.caminho), ["H:\\Small Commerce\\SMALL.FDB", "C:\\Dados\\SMALL.FDB"]);
+        assert.deepEqual(srvMod._locaisEmUso([], agora, 30 * min), []);
+        assert.deepEqual(srvMod._locaisEmUso(null, agora, 30 * min), []);
+        assert.deepEqual(srvMod._locaisEmUso([{ caminho: "x", mtime: NaN }], agora, 30 * min), []);
+    });
+
+    test("_buscarArquivosFdbLocais com comDetalhes devolve caminho e data de alteração", async () => {
+        const raiz = fs.mkdtempSync(path.join(require("os").tmpdir(), "fdb-"));
+        const f = path.join(raiz, "SMALL.FDB");
+        fs.writeFileSync(f, "x");
+        const r = await srvMod._buscarArquivosFdbLocais([raiz], { comDetalhes: true });
+        assert.equal(r.length, 1);
+        assert.equal(r[0].caminho, f);
+        assert.ok(Number.isFinite(r[0].mtime) && r[0].mtime > 0);
+    });
+});
