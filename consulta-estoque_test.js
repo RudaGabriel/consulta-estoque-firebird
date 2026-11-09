@@ -5,11 +5,11 @@
  *
  * @author Ruda Gabriel
  *
- * @version 2.10.0
+ * @version 2.11.0
  * @changelog
- *   2.10.0 - 2026-10-09 - Testes da regra única do estoque mínimo (motor
- *     1.8.0): estoque igual ao mínimo recusado, mínimo + 1 aceito, estoque
- *     fracionado, repetição do mesmo código e Agrupar no limite exato.
+ *   2.11.0 - 2026-11-09 - Testes da descoberta 5.52: só SMALL.FDB, caminhos
+ *     sem aliases, servidor em caminho UNC e em atalho .lnk, banco local
+ *     adotado sozinho marcado para nova busca e leitura de rede com prazo.
  *
  * EXECUÇÃO:
  *   node --test consulta-estoque_test.js
@@ -1037,7 +1037,7 @@ describe("descoberta automática do banco", () => {
         const achados = await srvMod._buscarArquivosFdbLocais([raiz], { prazoMs: 5000 });
         assert.equal(achados[0], alvo, "SMALL.FDB vem primeiro");
         assert.ok(!achados.some(a => /security3|employee/i.test(a)), "bancos do Firebird são ignorados");
-        assert.ok(achados.some(a => /VELHO\.FDB$/.test(a)), "outros .FDB entram depois");
+        assert.ok(!achados.some(a => /VELHO\.FDB$/.test(a)), "5.52: só SMALL.FDB entra (outros .FDB nunca)");
     });
 
     test("_buscarArquivosFdbLocais respeita a profundidade máxima", async () => {
@@ -1069,10 +1069,11 @@ describe("descoberta automática do banco", () => {
         assert.equal(r.falhas[0].auth, true);
     });
 
-    test("_caminhosConhecidos não repete caminhos e inclui aliases", () => {
-        const lista = srvMod._caminhosConhecidos();
+    test("_caminhosConhecidos não repete caminhos e só tem SMALL.FDB (sem aliases)", () => {
+        const lista = srvMod._caminhosConhecidos(["C:\\Small Commerce\\padrao.fdb"]);
         assert.equal(new Set(lista.map(c => c.toUpperCase())).size, lista.length);
-        assert.ok(lista.includes("SMALL"));
+        assert.ok(!lista.includes("SMALL"));
+        assert.ok(lista.every(c => /\\SMALL\.FDB$/i.test(c)), "padrao.fdb e aliases ficam de fora");
         assert.ok(lista.some(c => /Program Files \(x86\)\\SmallSoft\\Small Commerce\\SMALL\.FDB$/i.test(c)));
     });
 });
@@ -1174,7 +1175,55 @@ describe("descoberta 5.51: .ini do Small Commerce, pasta de instalação e camin
         assert.ok(lista.indexOf("H:\\Small Commerce\\SMALL.FDB") <= 1, "extra entre os primeiros");
         assert.ok(lista.includes("E:\\Small Commerce\\SMALL.FDB"));
         assert.ok(lista.includes("C:\\Program Files (x86)\\SmallSoft\\Small Commerce\\SMALL.FDB"));
-        assert.ok(lista.includes("SMALL"));
         assert.equal(new Set(lista.map(c => c.toUpperCase())).size, lista.length, "sem repetidos");
+    });
+});
+
+describe("descoberta 5.52: rede primeiro e só SMALL.FDB", () => {
+    const srvMod = require("./consulta-estoque.js");
+
+    test("_ehArquivoSmall aceita só SMALL.FDB (qualquer caixa)", () => {
+        for (const ok of ["SMALL.FDB", "small.fdb", "C:\\Program Files (x86)\\SmallSoft\\Small Commerce\\small.fdb", "H:/x/Small.Fdb"]) {
+            assert.equal(srvMod._ehArquivoSmall(ok), true, ok);
+        }
+        for (const nao of ["C:\\Small Commerce\\padrao.fdb", "exemplo.fdb", "off.fdb", "monitor.fdb",
+                           "C:\\ProgramData\\X\\copias\\SMALL_OFFLINE_20261109_174214.FDB", "NOVOSMALL.FDB", "SMALL", "", null]) {
+            assert.equal(srvMod._ehArquivoSmall(nao), false, String(nao));
+        }
+    });
+
+    test("_hostDeUnc tira o nome do servidor", () => {
+        assert.equal(srvMod._hostDeUnc("\\\\servidor\\SmallSoft\\Small Commerce"), "servidor");
+        assert.equal(srvMod._hostDeUnc("\\\\SRV-01"), "SRV-01");
+        assert.equal(srvMod._hostDeUnc("C:\\Small"), null);
+        assert.equal(srvMod._hostDeUnc(null), null);
+    });
+
+    test("_extrairUncDeAtalho acha o servidor no atalho (ANSI e UTF-16)", () => {
+        const alvo = "\\\\servidor\\SmallSoft\\Small Commerce\\Small.exe";
+        const buf = Buffer.concat([Buffer.from([0x4c, 0, 0, 0, 1, 2]), Buffer.from(alvo + "\0", "latin1"),
+                                   Buffer.from([0, 0, 9]), Buffer.from(alvo + "\0", "utf16le"),
+                                   Buffer.from("\\\\outro\\Fotos\\a.jpg\0", "latin1")]);
+        const r = srvMod._extrairUncDeAtalho(buf);
+        assert.deepEqual(r.hosts, ["servidor"]);
+        assert.deepEqual(r.pastas, ["\\\\servidor\\SmallSoft\\Small Commerce"]);
+        assert.deepEqual(srvMod._extrairUncDeAtalho(Buffer.alloc(0)), { hosts: [], pastas: [] });
+        assert.deepEqual(srvMod._extrairUncDeAtalho(null), { hosts: [], pastas: [] });
+    });
+
+    test("_bancoAutoSuspeito: local ou fora do padrão adotado sozinho → procura de novo", () => {
+        const local = h => /^(127\.0\.0\.1|localhost)?$/.test(h || "");
+        assert.equal(srvMod._bancoAutoSuspeito({ fbHostAuto: true, fbHost: "127.0.0.1", fbPath: "C:\\x\\SMALL.FDB" }, local), true);
+        assert.equal(srvMod._bancoAutoSuspeito({ fbHostAuto: true, fbHost: "SERVIDOR", fbPath: "C:\\x\\padrao.fdb" }, local), true);
+        assert.equal(srvMod._bancoAutoSuspeito({ fbHostAuto: true, fbHost: "SERVIDOR", fbPath: "C:\\x\\small.fdb" }, local), false);
+        assert.equal(srvMod._bancoAutoSuspeito({ fbHostAuto: false, fbHost: "127.0.0.1", fbPath: "C:\\x\\padrao.fdb" }, local), false, "escolha do usuário é respeitada");
+        assert.equal(srvMod._bancoAutoSuspeito({ fbHostAuto: true, fbHostFixo: true, fbHost: "127.0.0.1", fbPath: "x" }, local), false);
+        assert.equal(srvMod._bancoAutoSuspeito(null), false);
+    });
+
+    test("_comPrazo devolve o padrão quando a leitura de rede trava", async () => {
+        assert.equal(await srvMod._comPrazo(new Promise(() => {}), 50, "padrao"), "padrao");
+        assert.equal(await srvMod._comPrazo(Promise.resolve(1), 50, 0), 1);
+        assert.equal(await srvMod._comPrazo(Promise.reject(new Error("x")), 50, "erro"), "erro");
     });
 });

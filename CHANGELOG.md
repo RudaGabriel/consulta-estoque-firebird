@@ -9,10 +9,10 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.51.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.52.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.30.1**.
-- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.10.0**.
+- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.11.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
 - [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.1**.
 - [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. Versão atual **1.0.0**.
@@ -24,6 +24,24 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.52.0 (2026-11-09)
+
+```text
+Busca automática do banco: REDE PRIMEIRO e só SMALL.FDB.
+  - Só aceita arquivos chamados SMALL.FDB (antes adotava padrao.fdb,
+    exemplo.fdb etc. desta máquina, que abrem mas não são o banco da loja).
+  - O Firebird desta máquina (127.0.0.1) virou a ÚLTIMA opção; os IPs e o
+    nome desta máquina nunca contam como "servidor da rede".
+  - Novas pistas do servidor: unidades de rede mapeadas (ex.: H: →
+    \\SERVIDOR\SmallSoft), .ini/.cfg lidos nos compartilhamentos
+    (\\SERVIDOR\SmallSoft\Small Commerce), atalhos do Small Commerce na
+    Área de Trabalho/Menu Iniciar e o nome "SERVIDOR". O servidor é gravado
+    pelo NOME (não muda quando o IP muda).
+  - Banco local adotado sozinho por versão anterior: ao iniciar, procura de
+    novo o servidor da rede e troca a configuração se achar.
+  - Leituras em pastas de rede com prazo (servidor fora do ar não trava).
+```
 
 ### 5.51.0 (2026-11-09)
 
@@ -707,6 +725,15 @@ Passa a rodar as verificacoes de integridade
 ## consulta-estoque_test.js
 
 _Suíte de testes_
+
+### 2.11.0 (2026-11-09)
+
+```text
+Testes da descoberta 5.52: só SMALL.FDB (padrao.fdb, exemplo.fdb e cópias
+  SMALL_OFFLINE_* recusados), caminhos sem aliases, nome do servidor em
+  caminho UNC e em atalho .lnk (ANSI e UTF-16), banco local adotado sozinho
+  marcado para nova busca e leitura de rede com prazo. 135 testes.
+```
 
 ### 2.10.0 (2026-10-09)
 
