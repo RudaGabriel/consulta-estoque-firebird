@@ -9,7 +9,7 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.50.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.51.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.30.1**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.10.0**.
@@ -24,6 +24,25 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.51.0 (2026-11-09)
+
+```text
+A descoberta passa a SOBRESCREVER a configuração
+  quando o banco configurado falha (antes mantinha um host errado, como um
+  192.168.1.50 que não era o servidor). Ordem da busca:
+  [1] A configuração do próprio Small Commerce: lê os .ini das pastas de
+      instalação (C: a H:) e das pastas "Small..." achadas no disco, nos
+      formatos "C:\pasta\SMALL.FDB", "servidor:C:\..." e chaves
+      Servidor=/Host=/IP=.
+  [2] O Firebird desta máquina: .FDB do disco, com a pasta de instalação
+      ("Small Commerce", "SmallSoft") antes de cópias soltas e, depois, o
+      mais recente; e muitos caminhos típicos.
+  [3] O servidor configurado e os servidores da rede — agora incluindo a
+      rede 169.254 (PCs ligados direto por cabo), com prioridade mais
+      baixa —, testando caminhos nas unidades C: a H: e os do disco local.
+  Servidor que não responde segue descartado na hora.
+```
 
 ### 5.50.0 (2026-11-09)
 
