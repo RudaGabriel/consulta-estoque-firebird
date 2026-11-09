@@ -65,7 +65,7 @@ function renderMenu(st) {
     out.push(linha(" Modo sempre ativo: " + (st.sempreAtivo
         ? cor("LIGADO", "92;1") : "desligado")));
     out.push(meio);
-    out.push(linha(" [1] Abrir no navegador"));
+    out.push(linha(" [1] Abrir a janela do aplicativo"));
     out.push(linha(" [2] Abrir a pasta de dados"));
     out.push(linha(" [3] Atualizar (recarregar o banco)"));
     out.push(linha(" [4] Ver as últimas mensagens"));
@@ -298,7 +298,7 @@ function criarPainel(deps) {
             switch (op) {
                 case "1":
                     deps.abrirNavegador("http://localhost:" + deps.estado().porta);
-                    escrever("\n  Abrindo o navegador...\n"); await pausa();
+                    escrever("\n  Abrindo a janela do aplicativo...\n"); await pausa();
                     break;
                 case "2":
                     abrirPasta();
