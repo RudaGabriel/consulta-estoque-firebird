@@ -5,19 +5,19 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.44.0
+ * @version 5.45.0
  * @changelog
- *   5.44.0 - 2026-11-05 - Textos da interface revisados para português formal:
- *     rótulos, dicas (title), avisos (toasts), janelas de confirmação e
- *     mensagens de erro da API. Exemplos: "Resetar usados" → "Limpar itens
- *     usados"; "exige reiniciar" → "requer reinicialização"; "pergunto de
- *     novo"/"Vou lembrar você" → "o alerta será exibido novamente"; "Tentei
- *     todas as possibilidades" → "Todas as possibilidades foram testadas";
- *     "Body inválido"/"fbPort inválida" → "Corpo da requisição inválido"/
- *     "Porta do Firebird inválida". Corrigido "excluír" → "excluir" e a dica
- *     do Agrupar (pares e trios, não "sem limite de quantidade"). A dica do
- *     estoque mínimo reflete a regra única da 5.43.0. Sem mudança de
- *     comportamento.
+ *   5.45.0 - 2026-11-09 - Modo executável (.exe único, gerado por executavel/
+ *     construir.js com o Node SEA — sem instalar Node.js nem npm):
+ *     [1] Dados (config.json, usados, lista personalizada) gravados na pasta do
+ *         próprio .exe, e não no conteúdo embutido, que é somente leitura.
+ *     [2] Abre o navegador ao iniciar (desligável com "abrirNavegador": false
+ *         no config.json ou com --sem-navegador) e põe a porta no título.
+ *     [3] Desliga o QuickEdit do console (um clique congelava o servidor).
+ *     [4] Porta ocupada por outra instância do servidor: apenas abre o
+ *         navegador nela e fecha a nova. Erro fatal: a janela espera o Enter
+ *         para fechar, para a mensagem poder ser lida.
+ *     Fora do executável, o comportamento não muda.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
  * NÃO depende de gerar-relatorio-html.js nem servidor-relatorio.js.
@@ -35,7 +35,12 @@
 // Executado direto (node consulta-estoque.js) → sobe o servidor. Importado via
 // require() (testes) → só expõe os helpers puros, sem abrir porta, sem
 // conectar no banco e sem encerrar o processo por falta do node-firebird.
-const EXECUCAO_DIRETA = require.main === module;
+// Executável único (.exe gerado por executavel/construir.js com o Node SEA):
+// o script roda embutido no node.exe e sempre deve subir o servidor.
+const EXECUTAVEL = (() => {
+    try { return require("node:sea").isSea(); } catch (_) { return false; }
+})();
+const EXECUCAO_DIRETA = EXECUTAVEL || require.main === module;
 
 let Firebird = null;
 try {
@@ -57,9 +62,12 @@ const http = require("http");
 // ─────────────────────────────────────────────────────────────────────────────
 // CONSTANTES
 // ─────────────────────────────────────────────────────────────────────────────
-const CONFIG_PATH = path.join(__dirname, "config.json");
-const USADOS_PATH = path.join(__dirname, "usados-estoque.json");
-const LISTA_PERSONALIZADA_PATH = path.join(__dirname, "lista-personalizada.json");
+// Pasta dos dados (config.json, usados, lista personalizada): a do script ou,
+// no executável, a do próprio .exe — o conteúdo embutido é somente leitura.
+const PASTA_DADOS = EXECUTAVEL ? path.dirname(process.execPath) : __dirname;
+const CONFIG_PATH = path.join(PASTA_DADOS, "config.json");
+const USADOS_PATH = path.join(PASTA_DADOS, "usados-estoque.json");
+const LISTA_PERSONALIZADA_PATH = path.join(PASTA_DADOS, "lista-personalizada.json");
 const ANO_ATUAL   = new Date().getFullYear();
 const MAX_ITENS   = 2000;
 const LIMITE_SESSAO_BUSCA = 1000; // itens por "sessão" de busca estendida (Modo Automático) — evita travar o navegador
@@ -6559,11 +6567,94 @@ function _encerrarProcesso(motivo, codigo) {
     logTs("Encerrando servidor (" + motivo + ")...");
     _gravadorUsados.descarregarSync();
     _gravadorLista.descarregarSync();
+    // Executável aberto com duplo clique: num erro, a janela fecharia antes de
+    // a mensagem ser lida. Espera o Enter (ou 2 minutos) antes de sair.
+    if (EXECUTAVEL && codigo !== 0 && process.stdin && process.stdin.isTTY) {
+        logTs("Pressione Enter para fechar esta janela.");
+        setTimeout(() => process.exit(codigo), 120000).unref();
+        try {
+            process.stdin.resume();
+            process.stdin.once("data", () => process.exit(codigo));
+        } catch (_) { process.exit(codigo); }
+        return;
+    }
     process.exit(codigo);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODO EXECUTÁVEL (.exe): navegador, título e console
+// ─────────────────────────────────────────────────────────────────────────────
+// Abre a URL no navegador padrão sem criar janela de console extra. Falha é
+// apenas registrada: a interface continua acessível pelo endereço exibido.
+function _abrirNavegador(url) {
+    try {
+        const { spawn } = require("child_process");
+        const opcoes = { detached: true, stdio: "ignore", windowsHide: true };
+        let filho;
+        if (process.platform === "win32") filho = spawn("cmd.exe", ["/c", "start", "", url], opcoes);
+        else if (process.platform === "darwin") filho = spawn("open", [url], opcoes);
+        else filho = spawn("xdg-open", [url], opcoes);
+        filho.on("error", e => logTs("AVISO: n\u00e3o foi poss\u00edvel abrir o navegador (" + e.message + "). Acesse " + url));
+        filho.unref();
+    } catch (e) {
+        logTs("AVISO: n\u00e3o foi poss\u00edvel abrir o navegador (" + _mensagemErro(e) + "). Acesse " + url);
+    }
+}
+
+// Windows: com o QuickEdit ligado, um clique no console inicia uma seleção que
+// CONGELA a escrita no console — e, com ela, o servidor inteiro. Desliga só
+// para esta janela (mesmo ajuste do consulta-estoque.bat). O PowerShell herda
+// o console (stdin) e não cria janela; falha é ignorada.
+function _desativarQuickEditWindows() {
+    if (process.platform !== "win32" || !process.stdin || !process.stdin.isTTY) return;
+    const ps = [
+        "try {",
+        "Add-Type -Namespace Estoque -Name Con -MemberDefinition '",
+        "[DllImport(\"kernel32.dll\")] public static extern System.IntPtr GetStdHandle(int n);",
+        "[DllImport(\"kernel32.dll\")] public static extern bool GetConsoleMode(System.IntPtr h, out uint m);",
+        "[DllImport(\"kernel32.dll\")] public static extern bool SetConsoleMode(System.IntPtr h, uint m);';",
+        "$h = [Estoque.Con]::GetStdHandle(-10); $m = [uint32]0;",
+        "if ([Estoque.Con]::GetConsoleMode($h, [ref]$m)) {",
+        "$novo = ($m -bor 0x80) -bxor ($m -band 0x40); [void][Estoque.Con]::SetConsoleMode($h, [uint32]$novo) }",
+        "} catch { }"
+    ].join(" ");
+    try {
+        const { spawn } = require("child_process");
+        // -EncodedCommand (UTF-16LE em Base64): nenhuma aspa passa pela linha de comando.
+        const cod = Buffer.from(ps, "utf16le").toString("base64");
+        const filho = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", cod],
+            { stdio: ["inherit", "ignore", "ignore"], windowsHide: true });
+        filho.on("error", () => {});
+    } catch (_) { /* sem PowerShell: segue com o QuickEdit como estiver */ }
+}
+
+// Porta ocupada no executável: se for uma instância deste mesmo servidor (ex.:
+// duplo clique de novo), só abre o navegador nela e fecha esta, sem erro.
+function _verificarInstanciaExistente(callback) {
+    const req = http.get({ host: "127.0.0.1", port: PORTA, path: "/api/status", timeout: 2000 }, res => {
+        res.resume();
+        callback(res.statusCode === 200);
+    });
+    req.on("timeout", () => { req.destroy(); });
+    req.on("error", () => callback(false));
 }
 
 function iniciarServidor() {
     server.on("error", err => {
+        if (err.code === "EADDRINUSE" && EXECUTAVEL) {
+            _verificarInstanciaExistente(ativa => {
+                if (ativa) {
+                    logTs(APP_NAME + " j\u00e1 est\u00e1 em execu\u00e7\u00e3o na porta " + PORTA + ". Abrindo o navegador...");
+                    _abrirNavegador("http://localhost:" + PORTA);
+                    setTimeout(() => process.exit(0), 1500);
+                    return;
+                }
+                logErro("ERRO: A porta " + PORTA + " est\u00e1 em uso por outro programa.");
+                logTs("Defina outra porta em 'portaEstoque' no config.json, na pasta do execut\u00e1vel.");
+                _encerrarProcesso("porta em uso", 1);
+            });
+            return;
+        }
         if (err.code === "EADDRINUSE") {
             logErro("ERRO: Porta " + PORTA + " j\u00e1 est\u00e1 em uso.");
             logTs("Adicione 'portaEstoque': XXXX no config.json para usar outra porta.");
@@ -6592,6 +6683,16 @@ function iniciarServidor() {
         logTs("Ano:    sem filtro de ano (todos os itens com estoque > 0)");
         logTs("Limite: " + _cfgVivo.maxItens + " itens | Proibidos: " + _proibidosAtivos.length + " termos");
         logTs("\u2550".repeat(50));
+
+        if (EXECUTAVEL) {
+            logTs("Dados e configura\u00e7\u00f5es: " + PASTA_DADOS);
+            logTs("Para encerrar, pressione Ctrl+C ou feche esta janela.");
+            try { process.title = APP_NAME + " - porta " + PORTA; } catch (_) {}
+            _desativarQuickEditWindows();
+            if (cfg.abrirNavegador !== false && process.argv.indexOf("--sem-navegador") === -1) {
+                _abrirNavegador("http://localhost:" + PORTA);
+            }
+        }
 
         carregarItens().then(ok => {
             if (ok) {

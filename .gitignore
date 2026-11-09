@@ -17,3 +17,11 @@ package-lock.json
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Executável (pasta executavel/): o package.json de construção é versionado;
+# a saída, o cache de downloads e os temporários não.
+!executavel/package.json
+!executavel/package-lock.json
+executavel/dist/
+executavel/.cache/
+executavel/.construcao/

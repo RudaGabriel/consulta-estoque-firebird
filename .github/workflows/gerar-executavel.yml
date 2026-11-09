@@ -1,0 +1,71 @@
+# Gera os executáveis do Consulta Estoque (Windows 64 e 32 bits).
+# - Manual (Actions > Gerar executável > Run workflow): arquivos em "Artifacts".
+# - Tag v* (ex.: v5.45.0): também cria a Release com os arquivos anexados.
+name: Gerar executável
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: executavel
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Testes do projeto
+        working-directory: .
+        run: |
+          node -c consulta-estoque.js
+          node validar-client.js
+          node --test consulta-estoque_test.js
+
+      - name: Instalar dependências de construção
+        run: npm ci --no-audit --no-fund
+
+      - name: Gerar executáveis
+        run: node construir.js --alvos=win-x64,win-x86,linux-x64
+
+      - name: Testar o binário Linux (sobe, responde e encerra)
+        run: |
+          mkdir -p /tmp/teste-exe && cp dist/ConsultaEstoque-*-linux-x64 /tmp/teste-exe/app
+          cd /tmp/teste-exe
+          echo '{"portaEstoque":7999,"fbHost":"127.0.0.1"}' > config.json
+          ./app --sem-navegador > saida.log 2>&1 &
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:7999/api/status > /dev/null && break; sleep 1; done
+          curl -fs -o /dev/null http://127.0.0.1:7999/
+          curl -fs -X POST -H 'X-Requested-With: XMLHttpRequest' http://127.0.0.1:7999/api/encerrar
+          sleep 2
+          cat saida.log
+
+      - name: Remover o binário Linux (só de teste)
+        run: |
+          rm -f dist/ConsultaEstoque-*-linux-x64
+          grep -v 'linux-x64' dist/SHA256SUMS.txt > dist/SHA256SUMS.tmp && mv dist/SHA256SUMS.tmp dist/SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ConsultaEstoque-executaveis
+          path: executavel/dist/
+          retention-days: 30
+
+      - name: Publicar Release (somente em tag v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            executavel/dist/*.exe
+            executavel/dist/SHA256SUMS.txt

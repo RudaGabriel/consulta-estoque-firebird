@@ -9,18 +9,35 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.44.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.45.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.30.1**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.10.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
 - [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.1**.
+- [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. Versão atual **1.0.0**.
 
 ---
 
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.45.0 (2026-11-09)
+
+```text
+Modo executável (.exe único, gerado por executavel/
+  construir.js com o Node SEA — sem instalar Node.js nem npm):
+  [1] Dados (config.json, usados, lista personalizada) gravados na pasta do
+      próprio .exe, e não no conteúdo embutido, que é somente leitura.
+  [2] Abre o navegador ao iniciar (desligável com "abrirNavegador": false
+      no config.json ou com --sem-navegador) e põe a porta no título.
+  [3] Desliga o QuickEdit do console (um clique congelava o servidor).
+  [4] Porta ocupada por outra instância do servidor: apenas abre o
+      navegador nela e fecha a nova. Erro fatal: a janela espera o Enter
+      para fechar, para a mensagem poder ser lida.
+  Fora do executável, o comportamento não muda.
+```
 
 ### 5.44.0 (2026-11-05)
 
@@ -697,4 +714,21 @@ Quebras de linha convertidas para
  nesse formato (ver instalar-na-inicializacao.bat v1.8.1). Padronizado
  em todo o projeto para evitar a armadilha em edicoes futuras.
  Se for editar, use um editor que preserve CRLF.
+```
+
+---
+
+## executavel/construir.js
+
+_Gerador do executável único para Windows_
+
+### 1.0.0 (2026-11-09)
+
+```text
+Primeira versão. Gera o executável único do Consulta Estoque com o Node
+SEA (Single Executable Application): consulta-estoque.js + node-firebird
+empacotados com o esbuild num só script, injetado no node.exe oficial
+(baixado do nodejs.org e conferido pelo SHA-256 publicado). Alvos:
+Windows 64 bits e 32 bits; linux-x64 opcional, para teste. Propriedades
+do arquivo (nome, versão, autor) gravadas com o resedit.
 ```
