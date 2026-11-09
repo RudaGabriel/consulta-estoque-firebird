@@ -9,7 +9,7 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.46.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.47.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.30.1**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.10.0**.
@@ -24,6 +24,20 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.47.0 (2026-11-09)
+
+```text
+A varredura de rede nunca mais troca um host definido
+  pelo usuário. Antes, qualquer falha de conexão (ex.: servidor da loja
+  fora do ar ou em outra rede) disparava a busca de Firebird na rede,
+  adotava o PRIMEIRO host encontrado e gravava no config.json — podendo
+  apontar para o banco errado. Agora a busca só roda quando NÃO há host
+  configurado (1ª execução); um host definido nas Configurações é mantido
+  e apenas re-tentado. Hosts adotados pela busca ganham a marca
+  fbHostAuto para que uma nova busca possa atualizá-los (IP de DHCP), e
+  salvar o host pela tela de Configurações limpa essa marca.
+```
 
 ### 5.46.0 (2026-11-09)
 
