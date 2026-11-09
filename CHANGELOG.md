@@ -9,19 +9,38 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.45.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.46.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.30.1**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.10.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
 - [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.1**.
 - [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. Versão atual **1.0.0**.
+- [`executavel/gerar-executavel.bat`](#executavelgerar-executavelbat): Gera os executáveis com dois cliques. Versão atual **1.0.0**.
+- [`executavel/consola.js`](#executavelconsolajs): Painel do executável (menu e modo sempre ativo). Versão atual **1.0.0**.
 
 ---
 
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.46.0 (2026-11-09)
+
+```text
+Painel do executável (menu no console) e modo
+  sempre ativo (executavel/consola.js):
+  [1] Menu interativo ao abrir o .exe: navegador, pasta de dados, atualizar,
+      ver mensagens, alterar porta e o modo sempre ativo.
+  [2] Modo sempre ativo, protegido por um código do usuário: inicia com o
+      Windows (HKCU\...\Run, sem administrador), um guardião reabre o
+      servidor se cair, e fechar a janela sem o código apenas a minimiza.
+      Continua encerrável pelo Gerenciador de Tarefas e pelo código; o
+      guardião nunca se reergue sozinho e para quando o código desliga o
+      modo. Não bloqueia o sistema nem se esconde.
+  [3] Registro em consulta-estoque.log e flags --sem-menu / --guardiao /
+      --inicio-automatico. Fora do executável, nada muda.
+```
 
 ### 5.45.0 (2026-11-09)
 
@@ -731,4 +750,38 @@ empacotados com o esbuild num só script, injetado no node.exe oficial
 (baixado do nodejs.org e conferido pelo SHA-256 publicado). Alvos:
 Windows 64 bits e 32 bits; linux-x64 opcional, para teste. Propriedades
 do arquivo (nome, versão, autor) gravadas com o resedit.
+```
+
+---
+
+## executavel/gerar-executavel.bat
+
+_Gera os executáveis com dois cliques_
+
+### 1.0.0 (2026-11-09)
+
+```text
+Primeira versao. Gera os executaveis do Consulta Estoque com dois cliques,
+sem comandos: baixa um Node.js portatil (so na primeira vez, dentro desta
+pasta, sem instalar nada no Windows e sem administrador; SHA-256
+conferido), instala as ferramentas de construcao, gera os .exe de 64 e 32
+bits e abre a pasta com o resultado.
+```
+
+---
+
+## executavel/consola.js
+
+_Painel do executável (menu e modo sempre ativo)_
+
+### 1.0.0 (2026-11-09)
+
+```text
+Primeira versão. Menu interativo no console do .exe (navegador, pasta de
+dados, atualizar, ver mensagens, alterar porta) e o modo sempre ativo,
+protegido por um código do usuário: inicia com o Windows, um guardião
+reabre o servidor se cair, e fechar a janela sem o código apenas a
+minimiza. Continua encerrável pelo Gerenciador de Tarefas e pelo código;
+o guardião nunca se reergue sozinho e para quando o código desliga o
+modo. Não bloqueia o sistema nem se esconde.
 ```

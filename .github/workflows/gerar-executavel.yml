@@ -44,7 +44,7 @@ jobs:
           mkdir -p /tmp/teste-exe && cp dist/ConsultaEstoque-*-linux-x64 /tmp/teste-exe/app
           cd /tmp/teste-exe
           echo '{"portaEstoque":7999,"fbHost":"127.0.0.1"}' > config.json
-          ./app --sem-navegador > saida.log 2>&1 &
+          ./app --sem-menu --sem-navegador > saida.log 2>&1 &
           for i in $(seq 1 20); do curl -fs http://127.0.0.1:7999/api/status > /dev/null && break; sleep 1; done
           curl -fs -o /dev/null http://127.0.0.1:7999/
           curl -fs -X POST -H 'X-Requested-With: XMLHttpRequest' http://127.0.0.1:7999/api/encerrar

@@ -154,7 +154,7 @@ Alternativa ao `.bat`: um **único arquivo `.exe`** com o Node.js e o `node-fire
 - `ConsultaEstoque-<versão>-win-x64.exe`: Windows 10 e 11 de 64 bits.
 - `ConsultaEstoque-<versão>-win-x86.exe`: Windows 10 de 32 bits, para PCs antigos ou mais fracos.
 
-Copie o `.exe` para uma pasta e dê dois cliques. Ele abre o navegador sozinho, e os dados ficam na pasta do `.exe`. Os executáveis são gerados pela pasta [`executavel/`](executavel/README.md), localmente ou pelo GitHub Actions (**Actions > Gerar executável**). Veja o [README do executável](executavel/README.md) para os detalhes.
+Copie o `.exe` para uma pasta e dê dois cliques. Ele abre o navegador sozinho, e os dados ficam na pasta do `.exe`. Para gerar os executáveis, dê dois cliques em **`executavel/gerar-executavel.bat`**: ele baixa o que for preciso, gera os dois `.exe` e abre a pasta com o resultado, sem nenhum comando. Também é possível gerá-los pelo GitHub Actions (**Actions > Gerar executável**). Veja o [README do executável](executavel/README.md) para os detalhes.
 
 ---
 

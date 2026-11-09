@@ -5,19 +5,20 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.45.0
+ * @version 5.46.0
  * @changelog
- *   5.45.0 - 2026-11-09 - Modo executável (.exe único, gerado por executavel/
- *     construir.js com o Node SEA — sem instalar Node.js nem npm):
- *     [1] Dados (config.json, usados, lista personalizada) gravados na pasta do
- *         próprio .exe, e não no conteúdo embutido, que é somente leitura.
- *     [2] Abre o navegador ao iniciar (desligável com "abrirNavegador": false
- *         no config.json ou com --sem-navegador) e põe a porta no título.
- *     [3] Desliga o QuickEdit do console (um clique congelava o servidor).
- *     [4] Porta ocupada por outra instância do servidor: apenas abre o
- *         navegador nela e fecha a nova. Erro fatal: a janela espera o Enter
- *         para fechar, para a mensagem poder ser lida.
- *     Fora do executável, o comportamento não muda.
+ *   5.46.0 - 2026-11-09 - Painel do executável (menu no console) e modo
+ *     sempre ativo (executavel/consola.js):
+ *     [1] Menu interativo ao abrir o .exe: navegador, pasta de dados, atualizar,
+ *         ver mensagens, alterar porta e o modo sempre ativo.
+ *     [2] Modo sempre ativo, protegido por um código do usuário: inicia com o
+ *         Windows (HKCU\\...\\Run, sem administrador), um guardião reabre o
+ *         servidor se cair, e fechar a janela sem o código apenas a minimiza.
+ *         Continua encerrável pelo Gerenciador de Tarefas e pelo código; o
+ *         guardião nunca se reergue sozinho e para quando o código desliga o
+ *         modo. Não bloqueia o sistema nem se esconde.
+ *     [3] Registro em consulta-estoque.log e flags --sem-menu / --guardiao /
+ *         --inicio-automatico. Fora do executável, nada muda.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
  * NÃO depende de gerar-relatorio-html.js nem servidor-relatorio.js.
@@ -168,11 +169,32 @@ function identificadorSqlValido(nome) {
 // CONSULTA_ESTOQUE_LOG=1 reativa quando for preciso depurar um teste.
 const _LOG_SILENCIOSO = !EXECUCAO_DIRETA && process.env.CONSULTA_ESTOQUE_LOG !== "1";
 
+// Buffer das últimas mensagens e registro em arquivo — só no executável, para
+// o menu poder exibir o histórico ([4]) sem embaralhar a tela. _menuAtivo true
+// enquanto o menu está na frente: as mensagens vão para o buffer/arquivo, não
+// para a tela.
+const _bufferLog = [];
+let _menuAtivo = false;
+function _anexarLogArquivo(linha) {
+    if (!EXECUTAVEL) return;
+    try {
+        const arq = path.join(PASTA_DADOS, "consulta-estoque.log");
+        try { if (fs.statSync(arq).size > 5 * 1024 * 1024) fs.unlinkSync(arq); } catch (_) {}
+        fs.appendFileSync(arq, linha);
+    } catch (_) {}
+}
+
 function logTs(msg, nivel) {
     if (_LOG_SILENCIOSO) return;
     const d = new Date();
-    const linha = "[" + p2(d.getHours()) + ":" + p2(d.getMinutes()) + ":" + p2(d.getSeconds()) + "] " +
-        String(msg) + "\n";
+    const hora = "[" + p2(d.getHours()) + ":" + p2(d.getMinutes()) + ":" + p2(d.getSeconds()) + "] ";
+    const linha = hora + String(msg) + "\n";
+    if (EXECUTAVEL) {
+        _bufferLog.push(hora + String(msg));
+        if (_bufferLog.length > 300) _bufferLog.shift();
+        _anexarLogArquivo(linha);
+        if (_menuAtivo) return; // não embaralha o menu; histórico fica no buffer/arquivo
+    }
     if (nivel === "erro") process.stderr.write(linha);
     else process.stdout.write(linha);
 }
@@ -6639,6 +6661,33 @@ function _verificarInstanciaExistente(callback) {
     req.on("error", () => callback(false));
 }
 
+// Instancia o painel do executável (menu + guardião), injetando o que ele
+// precisa do servidor. Memoizado: um só painel por processo.
+let _painelCache = null;
+function _painelExecutavel() {
+    if (_painelCache) return _painelCache;
+    const consola = require("./executavel/consola.js");
+    _painelCache = consola.criarPainel({
+        fs, path,
+        APP_NAME,
+        PASTA_DADOS,
+        CONFIG_PATH,
+        execPath: process.execPath,
+        ehExecutavel: EXECUTAVEL,
+        scriptPath: __filename,
+        bufferLog: _bufferLog,
+        logTs,
+        lerConfig: _lerConfigParaMerge,
+        salvarConfig: (obj) => _gravarJsonAtomicoSync(CONFIG_PATH, obj),
+        abrirNavegador: _abrirNavegador,
+        verificarInstancia: _verificarInstanciaExistente,
+        solicitarRecarga: _solicitarRecarga,
+        encerrar: _encerrarProcesso,
+        estado: () => ({ porta: PORTA, itens: _itensBrutos.length, conectado: !_erroConexao, erro: _erroConexao || "" })
+    });
+    return _painelCache;
+}
+
 function iniciarServidor() {
     server.on("error", err => {
         if (err.code === "EADDRINUSE" && EXECUTAVEL) {
@@ -6686,11 +6735,26 @@ function iniciarServidor() {
 
         if (EXECUTAVEL) {
             logTs("Dados e configura\u00e7\u00f5es: " + PASTA_DADOS);
-            logTs("Para encerrar, pressione Ctrl+C ou feche esta janela.");
             try { process.title = APP_NAME + " - porta " + PORTA; } catch (_) {}
             _desativarQuickEditWindows();
-            if (cfg.abrirNavegador !== false && process.argv.indexOf("--sem-navegador") === -1) {
+            // Sem menu quando: iniciado em segundo plano (guardião/Windows),
+            // pedido explicitamente (--sem-menu) ou sem console interativo (TTY).
+            const temTTY = !!(process.stdin && process.stdin.isTTY);
+            const semMenu = process.argv.indexOf("--sempre-ativo") !== -1 ||
+                            process.argv.indexOf("--inicio-automatico") !== -1 ||
+                            process.argv.indexOf("--sem-menu") !== -1 ||
+                            !temTTY;
+            if (cfg.abrirNavegador !== false && process.argv.indexOf("--sem-navegador") === -1 && !semMenu) {
                 _abrirNavegador("http://localhost:" + PORTA);
+            }
+            if (semMenu) {
+                // Iniciado pelo guardião ou pela inicialização do Windows: sem menu
+                // interativo; mensagens no arquivo de log e janela minimizada.
+                logTs("Modo sempre ativo: servidor em segundo plano. Registro em consulta-estoque.log.");
+                _painelExecutavel().minimizar();
+            } else {
+                _menuAtivo = true;
+                _painelExecutavel().iniciarMenu();
             }
         }
 
@@ -6708,7 +6772,13 @@ function iniciarServidor() {
     });
 }
 
-if (EXECUCAO_DIRETA) iniciarServidor();
+if (EXECUCAO_DIRETA) {
+    if (EXECUTAVEL && process.argv.indexOf("--guardiao") !== -1) {
+        _painelExecutavel().rodarGuardiao();
+    } else {
+        iniciarServidor();
+    }
+}
 
 // Helpers puros expostos para a suíte de testes (sem efeitos colaterais).
 module.exports = {
