@@ -108,7 +108,7 @@ Opções:
 - **Somente leitura:** as consultas usam transações `READ UNCOMMITTED`, que são sempre desfeitas (rollback) no final, sem bloquear o ERP.
 - **Itens exibidos:** estoque **> 0** (arredondado em 3 casas), descrição preenchida, código único, sem proibidos e sem inativos.
 - **Inativos:** a coluna `ATIVO`/`ATIVADO`/`SITUACAO`/`STATUS` é comparada com `N`, `I`, `X` e `F`. Qualquer outro valor conta como ativo.
-- **Banco encontrado automaticamente:** se o banco configurado não abrir, o sistema procura sozinho onde ele está e **atualiza a configuração**. Ordem: (1) a configuração do próprio Small Commerce (arquivos `.ini`); (2) o Firebird desta máquina, com os `.FDB` do disco (pasta de instalação antes de cópias, depois o mais recente); (3) o servidor configurado e os servidores Firebird da rede (LAN, Tailscale e cabo direto `169.254`), testando caminhos nas unidades `C:` a `H:`. Só conecta num banco que abre **e** tem a tabela de produtos do Small Commerce. Unidades de rede e CD ficam fora da busca em disco. Para travar o host, use `"fbHostFixo": true`.
+- **Banco encontrado automaticamente:** se o banco configurado não abrir, o sistema procura sozinho onde ele está e **atualiza a configuração**. A meta é ler o banco **pela rede**: (1) a configuração do próprio Small Commerce (`.ini`/`.cfg` desta máquina, das unidades de rede mapeadas e do compartilhamento `\\SERVIDOR\SmallSoft\Small Commerce`, e os atalhos do Small na Área de Trabalho/Menu Iniciar); (2) os servidores da rede, pelo nome (que não muda quando o IP muda), o configurado, o nome `SERVIDOR` e a varredura (LAN, Tailscale e cabo direto `169.254`), testando caminhos nas unidades `C:` a `H:`; (3) **só por último** o Firebird desta máquina (`127.0.0.1`). Só aceita arquivos chamados `SMALL.FDB` e só conecta num banco que abre **e** tem a tabela de produtos do Small Commerce. O `.FDB` nunca é aberto por compartilhamento (só o `.ini` é lido). Para travar o host, use `"fbHostFixo": true`.
 - **Estoque mínimo:** os itens acima do mínimo vêm primeiro. Se faltar item para completar a lista, entram os que estão abaixo do mínimo, mas nunca os zerados.
 - **Proibidos:** no padrão de fábrica a lista vem **vazia**. Cadastre os termos da sua loja em **Configurações > Palavras Proibidas** (ou na chave `proibidos` do `config.json`). A comparação é por trecho da descrição, sem diferenciar maiúsculas e minúsculas. O campo aceita um termo por linha; se você colar a lista separada por vírgula, ponto e vírgula, `|` ou como JSON, ela é **convertida automaticamente** (maiúsculas, sem repetidos). Vírgula entre números, como em `1,5KG`, é mantida.
 - **Proteções:** cada carga tem tempo máximo de 60 s. Duas cargas nunca rodam ao mesmo tempo. Pedidos feitos durante uma carga ficam na fila e rodam assim que ela termina.
@@ -181,9 +181,10 @@ O arquivo é **opcional**: sem ele, o sistema detecta o banco sozinho. Quase tod
 | Campo | Padrão | Descrição |
 |---|---|---|
 | `appName` | `Consulta Estoque` | Nome exibido na interface (mudar exige reiniciar). |
-| `fbHost` | detectado (`127.0.0.1` se nada for encontrado) | IP ou nome do servidor Firebird. |
+| `fbHost` | detectado | IP ou nome do servidor Firebird. A busca automática procura **primeiro o servidor da rede** (pelas unidades mapeadas, pelos `.ini` e atalhos do Small Commerce, pelo nome `SERVIDOR` e pela varredura da rede) e só por último o Firebird desta máquina (`127.0.0.1`). |
 | `fbPort` | `3050` | Porta do Firebird. |
-| `fdbPath` | detectado | Caminho do `.FDB` **no servidor do banco**. |
+| `fdbPath` | detectado | Caminho do `SMALL.FDB` **no servidor do banco**. A busca automática só aceita arquivos chamados `SMALL.FDB`. |
+| `fbHostFixo` | `false` | `true` impede a busca automática de trocar o servidor e o caminho configurados. |
 | `fbUser` / `fbPassword` | `SYSDBA` / padrão de instalação | Credenciais do Firebird. Sem senha configurada, o log mostra um aviso de segurança. |
 | `portaEstoque` | `7888` | Porta HTTP da interface, de 1024 a 65535 (mudar exige reiniciar). |
 | `estoqueMinimo` | `5` | Itens abaixo desse valor só entram para completar a lista. Nas sugestões (Agrupar, Combinar e Modo Automático), um item só é usado se, depois do uso, o estoque continuar maior ou igual a esse valor. |
