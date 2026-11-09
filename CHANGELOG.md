@@ -9,7 +9,7 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.47.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.48.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.30.1**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.10.0**.
@@ -24,6 +24,22 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.48.0 (2026-11-09)
+
+```text
+Interface em janela de aplicativo e busca de rede
+  mais segura:
+  [1] O executável abre a interface numa JANELA DE APLICATIVO (sem abas nem
+      barra de endereço), com o Edge (já no Windows 10/11) ou o Chrome em
+      modo --app; sem eles, cai para o navegador padrão. Desligável com
+      "janelaApp": false no config.json ou com --navegador-comum.
+  [2] A busca automática de host só adota um Firebird onde o banco
+      configurado REALMENTE abre (attach real, com timeout) — antes bastava
+      a porta 3050 estar aberta, o que podia adotar um servidor sem o
+      SMALL.FDB. Sem nenhum host válido, nada é alterado e a causa é
+      registrada (caminho do .FDB ou usuário/senha).
+```
 
 ### 5.47.0 (2026-11-09)
 

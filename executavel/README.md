@@ -31,7 +31,7 @@ Ao abrir o `.exe`, aparece um menu no console com:
 
 | Opção | Faz |
 |---|---|
-| **[1]** | Abre a interface no navegador. |
+| **[1]** | Abre a interface na janela de aplicativo. |
 | **[2]** | Abre a pasta onde ficam os dados. |
 | **[3]** | Recarrega os dados do banco (igual ao botão "Atualizar"). |
 | **[4]** | Mostra as últimas mensagens do servidor. |
@@ -56,7 +56,7 @@ Os arquivos de dados (`config.json`, `usados-estoque.json` e `lista-personalizad
 
 ### Comportamentos do executável
 
-- **Flags de linha de comando:** `--sem-menu` (roda sem o menu), `--sem-navegador` (não abre o navegador), `--inicio-automatico` e `--guardiao` (usadas internamente pelo modo sempre ativo).
+- **Flags de linha de comando:** `--navegador-comum` (abre no navegador em vez da janela de aplicativo), `--sem-menu` (roda sem o menu), `--sem-navegador` (não abre nada), `--inicio-automatico` e `--guardiao` (usadas internamente pelo modo sempre ativo).
 - **Segunda execução:** se o servidor já estiver aberto, o `.exe` apenas abre o navegador nele e fecha a nova janela.
 - **Navegador:** para não abrir o navegador ao iniciar, adicione `"abrirNavegador": false` ao `config.json` ou execute com `--sem-navegador`.
 - **Erro ao iniciar** (ex.: porta usada por outro programa): a janela permanece aberta até você pressionar Enter, para que a mensagem possa ser lida.

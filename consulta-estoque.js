@@ -5,17 +5,19 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.47.0
+ * @version 5.48.0
  * @changelog
- *   5.47.0 - 2026-11-09 - A varredura de rede nunca mais troca um host definido
- *     pelo usuário. Antes, qualquer falha de conexão (ex.: servidor da loja
- *     fora do ar ou em outra rede) disparava a busca de Firebird na rede,
- *     adotava o PRIMEIRO host encontrado e gravava no config.json — podendo
- *     apontar para o banco errado. Agora a busca só roda quando NÃO há host
- *     configurado (1ª execução); um host definido nas Configurações é mantido
- *     e apenas re-tentado. Hosts adotados pela busca ganham a marca
- *     fbHostAuto para que uma nova busca possa atualizá-los (IP de DHCP), e
- *     salvar o host pela tela de Configurações limpa essa marca.
+ *   5.48.0 - 2026-11-09 - Interface em janela de aplicativo e busca de rede
+ *     mais segura:
+ *     [1] O executável abre a interface numa JANELA DE APLICATIVO (sem abas nem
+ *         barra de endereço), com o Edge (já no Windows 10/11) ou o Chrome em
+ *         modo --app; sem eles, cai para o navegador padrão. Desligável com
+ *         "janelaApp": false no config.json ou com --navegador-comum.
+ *     [2] A busca automática de host só adota um Firebird onde o banco
+ *         configurado REALMENTE abre (attach real, com timeout) — antes bastava
+ *         a porta 3050 estar aberta, o que podia adotar um servidor sem o
+ *         SMALL.FDB. Sem nenhum host válido, nada é alterado e a causa é
+ *         registrada (caminho do .FDB ou usuário/senha).
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
  * NÃO depende de gerar-relatorio-html.js nem servidor-relatorio.js.
@@ -531,6 +533,7 @@ async function _escanearSubnet(portaFirebird) {
 
     // Varre em lotes de 20 hosts em paralelo pra terminar em ~4s no pior caso
     const LOTE = 20;
+    const encontrados = [];
     for (let inicio = 1; inicio <= 254; inicio += LOTE) {
         const hosts = [];
         for (let i = inicio; i < Math.min(inicio + LOTE, 255); i++) {
@@ -540,11 +543,44 @@ async function _escanearSubnet(portaFirebird) {
         for (let i = 0; i < hosts.length; i++) {
             if (resultados[i]) {
                 logTs("Firebird encontrado: " + hosts[i] + ":" + portaFirebird);
-                return hosts[i];
+                encontrados.push(hosts[i]);
+                if (encontrados.length >= 10) return encontrados;
             }
         }
     }
+    return encontrados;
+}
+
+// Puro e testável: devolve o primeiro host da lista em que `probe(host)` for
+// verdadeiro (o banco abriu de fato), ou null.
+async function _primeiroHostQueAbre(hosts, probe) {
+    for (const h of (hosts || [])) {
+        let ok = false;
+        try { ok = await probe(h); } catch (_) { ok = false; }
+        if (ok) return h;
+    }
     return null;
+}
+
+// Tenta abrir o banco configurado em `host` (attach real, com timeout). Só
+// retorna true se o Firebird daquele host abriu o SMALL.FDB — evita adotar um
+// Firebird que só tem a porta aberta, mas não o banco.
+function _bancoAbreNoHost(host) {
+    return new Promise(resolve => {
+        const conf = Object.assign({}, _cfgVivo, { fbHost: host });
+        let feito = false;
+        const fim = (ok, db) => {
+            if (feito) return; feito = true;
+            if (db) { try { db.detach(() => {}); } catch (_) {} }
+            resolve(ok);
+        };
+        const t = setTimeout(() => fim(false, null), 6000);
+        _conectarFirebird(conf).then(con => {
+            clearTimeout(t);
+            if (con && con.db && !con.e) fim(true, con.db);
+            else fim(false, con && con.db);
+        }).catch(() => { clearTimeout(t); fim(false, null); });
+    });
 }
 
 // Scan de rede: no máximo UM por vez e com intervalo mínimo entre scans. Antes,
@@ -583,9 +619,19 @@ function _agendarScanRede() {
 // Use _agendarScanRede() em vez de chamar direto (controle de concorrência).
 async function autoDetectarHost() {
     const PORTA_FB = _cfgVivo ? _cfgVivo.fbPort : 3050;
-    const hostEncontrado = await _escanearSubnet(PORTA_FB);
-    if (!hostEncontrado) {
+    const candidatos = await _escanearSubnet(PORTA_FB);
+    if (!candidatos || !candidatos.length) {
         logTs("AVISO scan: nenhum host com Firebird encontrado na rede local.");
+        return;
+    }
+    // Só adota um host onde o banco configurado REALMENTE abre — evita pegar um
+    // Firebird que só tem a porta aberta, mas sem o SMALL.FDB daquele caminho.
+    logTs("Scan: testando se o banco abre em: " + candidatos.join(", "));
+    const hostEncontrado = await _primeiroHostQueAbre(candidatos, _bancoAbreNoHost);
+    if (!hostEncontrado) {
+        logTs("AVISO scan: encontrei Firebird na rede (" + candidatos.join(", ") +
+              "), mas o banco \"" + _cfgVivo.fbPath + "\" n\u00e3o abriu em nenhum. " +
+              "Confira o caminho do .FDB e o usu\u00e1rio/senha nas Configura\u00e7\u00f5es.");
         return;
     }
     if (_cfgVivo && _cfgVivo.fbHost === hostEncontrado) {
@@ -6649,6 +6695,55 @@ function _abrirNavegador(url) {
     }
 }
 
+// Abre a interface numa JANELA DE APLICATIVO (sem abas nem barra de endereço),
+// usando o Edge (já presente no Windows 10/11) ou o Chrome em modo --app. Um
+// perfil próprio garante uma janela limpa, separada do navegador do usuário.
+// Sem Edge/Chrome, cai para o navegador padrão.
+function _abrirJanelaApp(url) {
+    if (process.platform !== "win32") return _abrirNavegador(url);
+    try {
+        const pf   = process.env["ProgramFiles"] || "C:\\Program Files";
+        const pf86 = process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)";
+        const local = process.env["LOCALAPPDATA"] || "";
+        const candidatos = [
+            path.join(pf86, "Microsoft\\Edge\\Application\\msedge.exe"),
+            path.join(pf,   "Microsoft\\Edge\\Application\\msedge.exe"),
+            path.join(pf,   "Google\\Chrome\\Application\\chrome.exe"),
+            path.join(pf86, "Google\\Chrome\\Application\\chrome.exe"),
+            local ? path.join(local, "Google\\Chrome\\Application\\chrome.exe") : null
+        ].filter(Boolean);
+        let exe = null;
+        for (const c of candidatos) { try { if (fs.existsSync(c)) { exe = c; break; } } catch (_) {} }
+        if (!exe) {
+            logTs("Edge/Chrome n\u00e3o encontrado \u2014 abrindo no navegador padr\u00e3o.");
+            return _abrirNavegador(url);
+        }
+        const perfil = path.join(local || PASTA_DADOS, "ConsultaEstoque", "janela-app");
+        const args = [
+            "--app=" + url,
+            "--user-data-dir=" + perfil,
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--window-size=1200,820"
+        ];
+        const { spawn } = require("child_process");
+        const filho = spawn(exe, args, { detached: true, stdio: "ignore", windowsHide: false });
+        filho.on("error", () => _abrirNavegador(url));
+        filho.unref();
+        logTs("Interface aberta em janela de aplicativo.");
+    } catch (e) {
+        logTs("AVISO: falha ao abrir a janela de aplicativo (" + _mensagemErro(e) + ").");
+        _abrirNavegador(url);
+    }
+}
+
+// Decide como mostrar a interface: janela de aplicativo (padrão) ou navegador
+// comum (config.json "janelaApp": false, ou a flag --navegador-comum).
+function _abrirUI(url) {
+    const forcarNavegador = cfg.janelaApp === false || process.argv.indexOf("--navegador-comum") !== -1;
+    return forcarNavegador ? _abrirNavegador(url) : _abrirJanelaApp(url);
+}
+
 // Windows: com o QuickEdit ligado, um clique no console inicia uma seleção que
 // CONGELA a escrita no console — e, com ela, o servidor inteiro. Desliga só
 // para esta janela (mesmo ajuste do consulta-estoque.bat). O PowerShell herda
@@ -6705,7 +6800,7 @@ function _painelExecutavel() {
         logTs,
         lerConfig: _lerConfigParaMerge,
         salvarConfig: (obj) => _gravarJsonAtomicoSync(CONFIG_PATH, obj),
-        abrirNavegador: _abrirNavegador,
+        abrirNavegador: _abrirUI,
         verificarInstancia: _verificarInstanciaExistente,
         solicitarRecarga: _solicitarRecarga,
         encerrar: _encerrarProcesso,
@@ -6771,7 +6866,7 @@ function iniciarServidor() {
                             process.argv.indexOf("--sem-menu") !== -1 ||
                             !temTTY;
             if (cfg.abrirNavegador !== false && process.argv.indexOf("--sem-navegador") === -1 && !semMenu) {
-                _abrirNavegador("http://localhost:" + PORTA);
+                _abrirUI("http://localhost:" + PORTA);
             }
             if (semMenu) {
                 // Iniciado pelo guardião ou pela inicialização do Windows: sem menu
@@ -6816,6 +6911,7 @@ module.exports = {
     _formasBuscaCodigos,
     _reconciliarListaPersonalizada,
     _hostEhDoUsuario,
+    _primeiroHostQueAbre,
     _processarLinhasPrincipais,
     _mapearColunas,
     _montarSqlPrincipal,

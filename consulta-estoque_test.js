@@ -982,3 +982,22 @@ describe("varredura de rede não substitui o host definido pelo usuário", () =>
         assert.equal(srvMod._hostEhDoUsuario({ fbHost: "   " }), false);
     });
 });
+
+describe("scan adota só um host onde o banco abre (_primeiroHostQueAbre)", () => {
+    const srvMod = require("./consulta-estoque.js");
+    test("devolve o primeiro host cujo banco abre", async () => {
+        const r = await srvMod._primeiroHostQueAbre(["h1", "h2", "h3"], h => Promise.resolve(h === "h2"));
+        assert.equal(r, "h2");
+    });
+    test("nenhum host abre o banco → null (não adota host errado)", async () => {
+        assert.equal(await srvMod._primeiroHostQueAbre(["h1", "h2"], () => false), null);
+        assert.equal(await srvMod._primeiroHostQueAbre([], () => true), null);
+    });
+    test("probe que falha em um host não interrompe a busca", async () => {
+        const r = await srvMod._primeiroHostQueAbre(["ruim", "bom"], h => {
+            if (h === "ruim") throw new Error("timeout");
+            return h === "bom";
+        });
+        assert.equal(r, "bom");
+    });
+});
