@@ -5,19 +5,22 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.48.0
+ * @version 5.49.0
  * @changelog
- *   5.48.0 - 2026-11-09 - Interface em janela de aplicativo e busca de rede
- *     mais segura:
- *     [1] O executável abre a interface numa JANELA DE APLICATIVO (sem abas nem
- *         barra de endereço), com o Edge (já no Windows 10/11) ou o Chrome em
- *         modo --app; sem eles, cai para o navegador padrão. Desligável com
- *         "janelaApp": false no config.json ou com --navegador-comum.
- *     [2] A busca automática de host só adota um Firebird onde o banco
- *         configurado REALMENTE abre (attach real, com timeout) — antes bastava
- *         a porta 3050 estar aberta, o que podia adotar um servidor sem o
- *         SMALL.FDB. Sem nenhum host válido, nada é alterado e a causa é
- *         registrada (caminho do .FDB ou usuário/senha).
+ *   5.49.0 - 2026-11-09 - Descoberta automática do banco: o sistema acha
+ *     sozinho ONDE está o banco do Small Commerce (servidor + caminho do .FDB)
+ *     e conecta, sem editar nada. Quando o banco configurado não abre:
+ *     [1] Firebird desta máquina ativo: procura arquivos .FDB no disco (todas
+ *         as unidades, com limite de profundidade e tempo; SMALL.FDB primeiro,
+ *         depois o modificado mais recentemente) e tenta caminhos conhecidos.
+ *     [2] Servidor configurado (remoto): tenta outros caminhos conhecidos e
+ *         aliases do Firebird (SMALL, SMALLCOMMERCE).
+ *     [3] Rede: varre TODAS as placas úteis (LAN, depois Tailscale), ignorando
+ *         endereços link-local 169.254 (APIPA) — antes pegava a primeira placa.
+ *     Só adota um banco que ABRE e tem a tabela de produtos do Small Commerce
+ *     (nunca security3.fdb, employee.fdb ou outro banco qualquer). Grava host
+ *     e caminho no config.json. Se o banco existe mas a senha não confere,
+ *     avisa. Para travar o host e desligar a correção, "fbHostFixo": true.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
  * NÃO depende de gerar-relatorio-html.js nem servidor-relatorio.js.
@@ -510,41 +513,60 @@ function _portaAberta(host, porta, timeoutMs) {
     });
 }
 
-// Escaneia a subnet /24 derivada de um IP local, buscando Firebird na porta dada.
-// Retorna o primeiro IP que responder (ou null).
-async function _escanearSubnet(portaFirebird) {
-    // Descobre o IP local pra montar a base da subnet
-    const { networkInterfaces } = require("os");
-    const ifaces = networkInterfaces();
-    let base = null;
-    for (const nome of Object.keys(ifaces)) {
-        for (const iface of ifaces[nome]) {
-            if (!iface.internal && iface.family === "IPv4") {
-                const partes = iface.address.split(".");
-                base = partes.slice(0, 3).join("."); // ex: "192.168.0"
-                break;
-            }
+// ── Descoberta automática do banco ──────────────────────────────────────────
+// Objetivo: achar sozinho ONDE está o banco do Small Commerce (qual servidor e
+// qual caminho do .FDB) e conectar, sem o usuário editar nada. Uma combinação
+// host+caminho só é adotada quando o banco ABRE (attach real) E tem a tabela de
+// produtos (detectarTabelaProduto) — nunca um Firebird que só tem a porta
+// aberta, nem bancos do próprio Firebird (security3.fdb, employee.fdb...).
+
+// Puro: bases /24 das interfaces IPv4 úteis, em ordem de preferência. Ignora
+// interfaces internas, loopback e link-local (169.254.x.x — APIPA, adaptador
+// sem rede de verdade). Prefere LAN privada (192.168 > 10 > 172.16-31), depois
+// Tailscale/CGNAT (100.64/10), depois as demais.
+function _classificarRedes(ifaces) {
+    const vistas = new Set();
+    const lista = [];
+    for (const nome of Object.keys(ifaces || {})) {
+        for (const iface of (ifaces[nome] || [])) {
+            if (!iface || iface.internal) continue;
+            if (!(iface.family === "IPv4" || iface.family === 4)) continue;
+            const p = String(iface.address || "").split(".").map(Number);
+            if (p.length !== 4 || p.some(n => !Number.isInteger(n) || n < 0 || n > 255)) continue;
+            if (p[0] === 169 && p[1] === 254) continue; // link-local (APIPA)
+            if (p[0] === 127 || p[0] === 0) continue;
+            const base = p[0] + "." + p[1] + "." + p[2];
+            if (vistas.has(base)) continue;
+            vistas.add(base);
+            let prio = 4;
+            if (p[0] === 192 && p[1] === 168) prio = 0;
+            else if (p[0] === 10) prio = 1;
+            else if (p[0] === 172 && p[1] >= 16 && p[1] <= 31) prio = 2;
+            else if (p[0] === 100 && p[1] >= 64 && p[1] <= 127) prio = 3;
+            lista.push({ base, prio });
         }
-        if (base) break;
     }
-    if (!base) return null;
+    lista.sort((a, b) => a.prio - b.prio);
+    return lista.map(x => x.base);
+}
 
+// Varre uma subnet /24 pela porta do Firebird e devolve os hosts com a porta
+// aberta (até `limite`), em lotes de 20 em paralelo (~4 s no pior caso).
+async function _escanearSubnet(portaFirebird, base, limite) {
+    if (!base) return [];
+    limite = limite || 10;
     logTs("Scan de rede: procurando Firebird na subnet " + base + ".0/24 porta " + portaFirebird + "...");
-
-    // Varre em lotes de 20 hosts em paralelo pra terminar em ~4s no pior caso
     const LOTE = 20;
     const encontrados = [];
     for (let inicio = 1; inicio <= 254; inicio += LOTE) {
         const hosts = [];
-        for (let i = inicio; i < Math.min(inicio + LOTE, 255); i++) {
-            hosts.push(base + "." + i);
-        }
+        for (let i = inicio; i < Math.min(inicio + LOTE, 255); i++) hosts.push(base + "." + i);
         const resultados = await Promise.all(hosts.map(h => _portaAberta(h, portaFirebird)));
         for (let i = 0; i < hosts.length; i++) {
             if (resultados[i]) {
                 logTs("Firebird encontrado: " + hosts[i] + ":" + portaFirebird);
                 encontrados.push(hosts[i]);
-                if (encontrados.length >= 10) return encontrados;
+                if (encontrados.length >= limite) return encontrados;
             }
         }
     }
@@ -562,25 +584,148 @@ async function _primeiroHostQueAbre(hosts, probe) {
     return null;
 }
 
-// Tenta abrir o banco configurado em `host` (attach real, com timeout). Só
-// retorna true se o Firebird daquele host abriu o SMALL.FDB — evita adotar um
-// Firebird que só tem a porta aberta, mas não o banco.
-function _bancoAbreNoHost(host) {
+// Puro e testável: tenta as combinações {host, caminho} em ordem e devolve a
+// primeira em que `probe(host, caminho)` resolver { ok: true }, mais a lista
+// de falhas (para o diagnóstico final). Respeita um prazo total.
+async function _primeiraCombinacaoQueAbre(combos, probe, prazoMs) {
+    const limite = Date.now() + (prazoMs || 90000);
+    const falhas = [];
+    for (const c of (combos || [])) {
+        if (Date.now() > limite) break;
+        let r = null;
+        try { r = await probe(c.host, c.caminho); }
+        catch (e) { r = { ok: false, motivo: String((e && e.message) || e) }; }
+        if (r && r.ok) return { combo: c, falhas };
+        falhas.push({ host: c.host, caminho: c.caminho, motivo: (r && r.motivo) || "", auth: !!(r && r.auth) });
+    }
+    return { combo: null, falhas };
+}
+
+// Tenta abrir o banco `caminho` no `host` e confirma que é um banco do Small
+// Commerce (tem a tabela de produtos). Resolve { ok, auth, motivo }; auth=true
+// quando o banco existe mas o usuário/senha do Firebird não conferem.
+function _bancoAbreEm(host, caminho) {
     return new Promise(resolve => {
-        const conf = Object.assign({}, _cfgVivo, { fbHost: host });
+        const conf = Object.assign({}, _cfgVivo, { fbHost: host, fbPath: caminho });
         let feito = false;
-        const fim = (ok, db) => {
-            if (feito) return; feito = true;
-            if (db) { try { db.detach(() => {}); } catch (_) {} }
-            resolve(ok);
+        let dbAberto = null;
+        const fim = (r) => {
+            if (feito) return;
+            feito = true;
+            if (dbAberto) { try { dbAberto.detach(() => {}); } catch (_) {} }
+            resolve(r);
         };
-        const t = setTimeout(() => fim(false, null), 6000);
-        _conectarFirebird(conf).then(con => {
+        const t = setTimeout(() => fim({ ok: false, motivo: "tempo esgotado" }), 15000);
+        _conectarFirebird(conf).then(async con => {
+            if (!con || con.e || !con.db) {
+                clearTimeout(t);
+                const msg = String((con && con.e && (con.e.message || con.e)) || "falha ao conectar");
+                const auth = /password|user name|login|autentica|senha/i.test(msg);
+                return fim({ ok: false, auth, motivo: msg });
+            }
+            dbAberto = con.db;
+            let detectado = null;
+            try { detectado = await detectarTabelaProduto(con.db); } catch (_) { detectado = null; }
             clearTimeout(t);
-            if (con && con.db && !con.e) fim(true, con.db);
-            else fim(false, con && con.db);
-        }).catch(() => { clearTimeout(t); fim(false, null); });
+            if (detectado) return fim({ ok: true });
+            fim({ ok: false, motivo: "o banco abriu, mas n\u00e3o tem a tabela de produtos do Small Commerce" });
+        }).catch(e => { clearTimeout(t); fim({ ok: false, motivo: String((e && e.message) || e) }); });
     });
+}
+
+// Caminhos conhecidos do SMALL.FDB (instalações do Small Commerce) e aliases
+// comuns do Firebird. O caminho é sempre o do disco do SERVIDOR.
+function _caminhosConhecidos() {
+    const lista = [
+        _cfgVivo && _cfgVivo.fbPath,
+        "C:\\Program Files (x86)\\SmallSoft\\Small Commerce\\SMALL.FDB",
+        "C:\\Program Files\\SmallSoft\\Small Commerce\\SMALL.FDB",
+        "C:\\ProgramData\\SmallSoft\\Small Commerce\\SMALL.FDB",
+        "C:\\SmallSoft\\Small Commerce\\SMALL.FDB",
+        "C:\\SmallSoft\\SMALL.FDB",
+        "C:\\Small Commerce\\SMALL.FDB",
+        "C:\\SmallCommerce\\SMALL.FDB",
+        "C:\\Dados\\SMALL.FDB",
+        "D:\\SmallSoft\\Small Commerce\\SMALL.FDB",
+        "D:\\Small Commerce\\SMALL.FDB",
+        "D:\\Dados\\SMALL.FDB",
+        "SMALL", "SMALLCOMMERCE"
+    ];
+    const vistos = new Set();
+    const out = [];
+    for (const c of lista) {
+        if (!c) continue;
+        const k = String(c).trim().toUpperCase();
+        if (!k || vistos.has(k)) continue;
+        vistos.add(k);
+        out.push(String(c).trim());
+    }
+    return out;
+}
+
+// Unidades de disco do Windows que existem (C: a Z:). Fora do Windows, nenhuma.
+function _unidadesLocais() {
+    if (process.platform !== "win32") return [];
+    const out = [];
+    for (let c = 67; c <= 90; c++) {
+        const raiz = String.fromCharCode(c) + ":\\";
+        try { if (fs.existsSync(raiz)) out.push(raiz); } catch (_) {}
+    }
+    return out;
+}
+
+// Pastas que nunca têm o banco do Small Commerce (ou são do próprio sistema).
+const _PASTAS_IGNORADAS = new Set([
+    "windows", "$recycle.bin", "system volume information", "recovery", "perflogs",
+    "$windows.~bt", "$windows.~ws", "msocache", "windowsapps", "winsxs",
+    "node_modules", ".git", "appdata", "intel", "amd", "nvidia", "examples"
+]);
+// Bancos do próprio Firebird / de exemplo: nunca são o do Small Commerce.
+const _FDB_IGNORADOS = /^(security\d*|employee|help|isc4|mon\$.*)\.fdb$/i;
+
+// Procura arquivos .FDB no disco local (só faz sentido para o Firebird DESTA
+// máquina), com limites de profundidade, quantidade e tempo para não pesar no
+// PC. Pastas com "small", "dados", "banco" no nome são visitadas primeiro.
+// Ordena: SMALL.FDB primeiro, depois os modificados mais recentemente (o banco
+// em uso é alterado o tempo todo).
+async function _buscarArquivosFdbLocais(raizes, opcoes) {
+    opcoes = opcoes || {};
+    const maxProf = opcoes.maxProf != null ? opcoes.maxProf : 6;
+    const maxArq  = opcoes.maxArquivos || 15;
+    const prazo   = Date.now() + (opcoes.prazoMs || 25000);
+    const achados = [];
+    const fila = (raizes || []).map(r => ({ dir: r, prof: 0 }));
+    const prioritaria = nome => /small|dados|banco|fdb|commerce/i.test(nome);
+    while (fila.length && achados.length < maxArq && Date.now() < prazo) {
+        const { dir, prof } = fila.shift();
+        let ents;
+        try { ents = await fs.promises.readdir(dir, { withFileTypes: true }); } catch (_) { continue; }
+        const subPrio = [];
+        const subNormal = [];
+        for (const e of ents) {
+            const nome = e.name;
+            const caminho = path.join(dir, nome);
+            if (e.isFile() && /\.fdb$/i.test(nome)) {
+                if (_FDB_IGNORADOS.test(nome)) continue;
+                let mtime = 0;
+                try { mtime = (await fs.promises.stat(caminho)).mtimeMs; } catch (_) {}
+                achados.push({ caminho, nome, mtime });
+                if (achados.length >= maxArq) break;
+            } else if (e.isDirectory() && prof < maxProf) {
+                if (_PASTAS_IGNORADAS.has(nome.toLowerCase())) continue;
+                (prioritaria(nome) ? subPrio : subNormal).push({ dir: caminho, prof: prof + 1 });
+            }
+        }
+        fila.unshift(...subPrio);
+        fila.push(...subNormal);
+    }
+    achados.sort((a, b) => {
+        const sa = /^small\.fdb$/i.test(a.nome) ? 0 : 1;
+        const sb = /^small\.fdb$/i.test(b.nome) ? 0 : 1;
+        if (sa !== sb) return sa - sb;
+        return b.mtime - a.mtime;
+    });
+    return achados.map(a => a.caminho);
 }
 
 // Scan de rede: no máximo UM por vez e com intervalo mínimo entre scans. Antes,
@@ -590,13 +735,18 @@ const SCAN_INTERVALO_MIN_MS = 5 * 60 * 1000;
 let _scanEmAndamento = false;
 let _ultimoScanMs    = 0;
 
-// Dispara a varredura apenas quando o host pode ser auto-detectado — ou seja,
-// quando NÃO há um host definido pelo usuário. Um host configurado por ele é
-// mantido e apenas re-tentado, sem varrer a rede nem trocar o config.json.
+// Correção automática do host: a varredura só roda quando o host atual FALHA
+// em abrir o banco (ela é chamada a partir das falhas de conexão/carga) e só
+// adota um host onde o banco REALMENTE abre (ver autoDetectarBanco). Assim, um
+// host que funciona nunca é tocado (sem falha, sem varredura) e um host errado
+// é corrigido sozinho. Para travar o host e desligar a correção automática,
+// use "fbHostFixo": true no config.json.
+function _buscaAutomaticaLiberada(conf) {
+    return !(conf && conf.fbHostFixo === true);
+}
 function _agendarScanRedeSeAuto(motivo) {
-    if (_fbHostDoUsuario) {
-        logTs("Host " + _cfgVivo.fbHost + " definido nas configura\u00e7\u00f5es \u2014 mantido; " +
-              "a varredura de rede n\u00e3o troca o host (" + motivo + ").");
+    if (!_buscaAutomaticaLiberada(_cfgVivo)) {
+        logTs("Host " + _cfgVivo.fbHost + " fixado (fbHostFixo) \u2014 corre\u00e7\u00e3o autom\u00e1tica desligada (" + motivo + ").");
         return;
     }
     _agendarScanRede();
@@ -609,47 +759,110 @@ function _agendarScanRede() {
     _scanEmAndamento = true;
     _ultimoScanMs    = agora;
     setImmediate(() => {
-        autoDetectarHost()
+        autoDetectarBanco()
             .catch(e => logErro("ERRO no scan de rede: " + String((e && e.message) || e)))
             .finally(() => { _scanEmAndamento = false; });
     });
 }
 
-// Tenta descobrir o host Firebird na rede e atualiza _cfgVivo + config.json.
+// Descobre sozinho onde está o banco (servidor + caminho do .FDB) e conecta.
+// Ordem de tentativa (do mais provável e rápido ao mais caro):
+//   (1) o servidor configurado, com outros caminhos conhecidos (às vezes só o
+//       caminho está errado);
+//   (2) o Firebird DESTA máquina: arquivos .FDB achados no disco e caminhos
+//       conhecidos;
+//   (3) os servidores Firebird da rede local, em todas as placas úteis (sem
+//       169.254 link-local), com os caminhos conhecidos.
+// Adota a primeira combinação em que o banco abre e tem a tabela de produtos.
 // Use _agendarScanRede() em vez de chamar direto (controle de concorrência).
-async function autoDetectarHost() {
+async function autoDetectarBanco() {
     const PORTA_FB = _cfgVivo ? _cfgVivo.fbPort : 3050;
-    const candidatos = await _escanearSubnet(PORTA_FB);
-    if (!candidatos || !candidatos.length) {
-        logTs("AVISO scan: nenhum host com Firebird encontrado na rede local.");
+    const hostAtual = _cfgVivo ? _cfgVivo.fbHost : "";
+    const conhecidos = _caminhosConhecidos();
+    const ehLocal = h => h === "127.0.0.1" || h === "localhost" || h === "::1";
+    const vistos = new Set();
+    const combos = [];
+    const adicionar = (lista, host, caminho) => {
+        const k = host + "|" + String(caminho).toUpperCase();
+        if (vistos.has(k)) return;
+        vistos.add(k);
+        lista.push({ host, caminho });
+    };
+
+    // (1) Servidor configurado (remoto): talvez só o caminho esteja errado.
+    if (hostAtual && !ehLocal(hostAtual)) {
+        for (const c of conhecidos) adicionar(combos, hostAtual, c);
+    }
+
+    // (2) Firebird desta máquina.
+    let localAtivo = false;
+    try { localAtivo = await _portaAberta("127.0.0.1", PORTA_FB, 800); } catch (_) {}
+    if (localAtivo) {
+        logTs("Busca: Firebird ativo nesta máquina — procurando o arquivo .FDB no disco...");
+        let noDisco = [];
+        try { noDisco = await _buscarArquivosFdbLocais(_unidadesLocais()); } catch (_) {}
+        if (noDisco.length) {
+            logTs("Busca: .FDB encontrado(s) no disco: " + noDisco.slice(0, 5).join(" | ") +
+                  (noDisco.length > 5 ? " ..." : ""));
+        }
+        for (const c of noDisco) adicionar(combos, "127.0.0.1", c);
+        for (const c of conhecidos) adicionar(combos, "127.0.0.1", c);
+    }
+
+    let r = await _primeiraCombinacaoQueAbre(combos, _bancoAbreEm, 90000);
+    let falhas = r.falhas;
+
+    // (3) Rede local, se ainda não achou.
+    if (!r.combo) {
+        const { networkInterfaces } = require("os");
+        const bases = _classificarRedes(networkInterfaces()).slice(0, 3);
+        if (!bases.length) logTs("AVISO busca: nenhuma rede local utilizável encontrada.");
+        const combosRede = [];
+        for (const base of bases) {
+            const hosts = await _escanearSubnet(PORTA_FB, base, 10);
+            for (const h of hosts) {
+                if (ehLocal(h)) continue;
+                for (const c of conhecidos) adicionar(combosRede, h, c);
+            }
+        }
+        if (combosRede.length) {
+            const hostsRede = Array.from(new Set(combosRede.map(x => x.host)));
+            logTs("Busca: testando o banco em " + hostsRede.join(", ") + "...");
+            r = await _primeiraCombinacaoQueAbre(combosRede, _bancoAbreEm, 120000);
+            falhas = falhas.concat(r.falhas);
+        }
+    }
+
+    if (!r.combo) {
+        const comAuth = falhas.find(f => f.auth);
+        if (comAuth) {
+            logTs("AVISO busca: o banco foi encontrado em " + comAuth.host + " (" + comAuth.caminho +
+                  "), mas o usuário/senha do Firebird não conferem. Ajuste em Configurações.");
+        } else {
+            logTs("AVISO busca: não encontrei o banco do Small Commerce em nenhum servidor acessível. " +
+                  "Verifique se o servidor do Small Commerce está ligado e acessível por esta máquina.");
+        }
         return;
     }
-    // Só adota um host onde o banco configurado REALMENTE abre — evita pegar um
-    // Firebird que só tem a porta aberta, mas sem o SMALL.FDB daquele caminho.
-    logTs("Scan: testando se o banco abre em: " + candidatos.join(", "));
-    const hostEncontrado = await _primeiroHostQueAbre(candidatos, _bancoAbreNoHost);
-    if (!hostEncontrado) {
-        logTs("AVISO scan: encontrei Firebird na rede (" + candidatos.join(", ") +
-              "), mas o banco \"" + _cfgVivo.fbPath + "\" n\u00e3o abriu em nenhum. " +
-              "Confira o caminho do .FDB e o usu\u00e1rio/senha nas Configura\u00e7\u00f5es.");
+
+    const host = r.combo.host;
+    const caminho = r.combo.caminho;
+    if (_cfgVivo.fbHost === host && _cfgVivo.fbPath === caminho) {
+        logTs("Busca: banco já configurado (" + host + ":" + caminho + ") — sem mudança.");
         return;
     }
-    if (_cfgVivo && _cfgVivo.fbHost === hostEncontrado) {
-        logTs("Scan: host já configurado (" + hostEncontrado + ") — sem mudança.");
-        return;
-    }
-    logTs("Scan: atualizando fbHost para " + hostEncontrado);
-    if (_cfgVivo) _cfgVivo.fbHost = hostEncontrado;
-    // Persiste no config.json para não precisar escanear no próximo startup
+    logTs("Busca: banco encontrado em " + host + ":" + caminho + " — conectando.");
+    _cfgVivo.fbHost = host;
+    _cfgVivo.fbPath = caminho;
+    _cfgVivo.fbHostAuto = true;
     try {
-        _gravarJsonAtomicoSync(CONFIG_PATH, Object.assign(_lerConfigParaMerge(), { fbHost: hostEncontrado, fbHostAuto: true }));
-        if (_cfgVivo) _cfgVivo.fbHostAuto = true;
-        logTs("config.json atualizado com fbHost=" + hostEncontrado + " (detectado automaticamente)");
+        _gravarJsonAtomicoSync(CONFIG_PATH, Object.assign(_lerConfigParaMerge(),
+            { fbHost: host, fdbPath: caminho, fbHostAuto: true }));
+        logTs("config.json atualizado automaticamente: fbHost=" + host + ", fdbPath=" + caminho);
     } catch (e) {
-        logErro("AVISO: falha ao salvar config.json ap\u00f3s scan: " + e.message);
+        logErro("AVISO: falha ao salvar config.json após a busca: " + e.message);
     }
-    // Recarrega com o novo host (fica pendente se já houver carga em andamento)
-    _solicitarRecarga("scan de rede");
+    _solicitarRecarga("banco encontrado automaticamente");
 }
 
 const { host: FDB_HOST, dbPath: FDB_PATH } = detectarFdb();
@@ -729,20 +942,17 @@ let _cfgVivo = {
     estoqueMinimo:  (() => { const v = parseFloat(cfg.estoqueMinimo); return (Number.isFinite(v) && v >= 0) ? v : DEFAULTS.estoqueMinimo; })(),
     maxItens:       (() => { const v = parseInt(cfg.maxItens || "0", 10); return (v >= 100 && v <= MAX_ITENS_TETO) ? v : DEFAULTS.maxItens; })(),
     // Aceita array ou texto (ex.: "A, B; C") no config.json — sempre normalizado.
-    proibidosExtra: cfg.proibidos != null ? _engine._normalizarListaProibidos(cfg.proibidos).termos : []
+    proibidosExtra: cfg.proibidos != null ? _engine._normalizarListaProibidos(cfg.proibidos).termos : [],
+    // "fbHostFixo": true no config.json trava o host e desliga a correção
+    // automática (o host nunca é trocado pela varredura de rede).
+    fbHostFixo:     cfg.fbHostFixo === true
 };
 
-// Host definido pelo USUÁRIO (config.json com fbHost e sem a marca fbHostAuto)
-// nunca é substituído pela varredura de rede. A marca fbHostAuto=true só é
-// gravada quando a própria varredura adota um host — aí uma nova varredura pode
-// atualizá-lo (ex.: IP mudou no DHCP). Hosts antigos, sem a marca, contam como
-// definidos pelo usuário: a varredura os respeita.
 // Pura: um host conta como "do usuário" quando o config tem fbHost e NÃO está
-// marcado com fbHostAuto. Exportada para teste.
+// marcado com fbHostAuto (gravada pela própria varredura). Exportada para teste.
 function _hostEhDoUsuario(conf) {
     return !!(conf && conf.fbHost && String(conf.fbHost).trim()) && conf.fbHostAuto !== true;
 }
-let _fbHostDoUsuario = _hostEhDoUsuario(cfg);
 
 // ── AVISO DE SEGURANÇA: credencial padrão em uso ──────────────────────────────
 // Achado de auditoria: DEFAULTS.fbPassword é o usuário/senha padrão de
@@ -6521,7 +6731,7 @@ async function handlePostConfig(req, res, json, erro) {
         fbPassword: novo.fbPassword, portaEstoque: novo.portaEstoque, appName: novo.appName,
         estoqueMinimo: novo.estoqueMinimo, maxItens: novo.maxItens, proibidosExtra: novo.proibidosExtra
     });
-    if (novo.fbHost && String(novo.fbHost).trim()) { _cfgVivo.fbHostAuto = false; _fbHostDoUsuario = true; }
+    if (novo.fbHost && String(novo.fbHost).trim()) _cfgVivo.fbHostAuto = false;
 
     // Invalida cache do HTML se o nome da app, estoque mínimo, maxItens ou a
     // lista de proibidos mudou (o cliente usa _S.proibidosExtra na
@@ -6911,7 +7121,12 @@ module.exports = {
     _formasBuscaCodigos,
     _reconciliarListaPersonalizada,
     _hostEhDoUsuario,
+    _buscaAutomaticaLiberada,
     _primeiroHostQueAbre,
+    _primeiraCombinacaoQueAbre,
+    _classificarRedes,
+    _buscarArquivosFdbLocais,
+    _caminhosConhecidos,
     _processarLinhasPrincipais,
     _mapearColunas,
     _montarSqlPrincipal,
