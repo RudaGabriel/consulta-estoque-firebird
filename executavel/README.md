@@ -23,12 +23,40 @@ Para descobrir qual é o seu: **Configurações > Sistema > Sobre > Tipo de sist
    - procura o banco do Small Commerce (`SMALL.FDB`) e conecta;
    - abre o navegador em `http://localhost:7888`.
 3. Nos outros PCs da rede, acesse `http://IP-DESTE-PC:7888`.
-4. Para encerrar, pressione **Ctrl+C** ou feche a janela. Os dados pendentes são gravados antes de sair.
+4. Para encerrar, use o menu (**[0] Sair**), pressione **Ctrl+C** ou feche a janela. Os dados pendentes são gravados antes de sair.
+
+### Menu do executável
+
+Ao abrir o `.exe`, aparece um menu no console com:
+
+| Opção | Faz |
+|---|---|
+| **[1]** | Abre a interface no navegador. |
+| **[2]** | Abre a pasta onde ficam os dados. |
+| **[3]** | Recarrega os dados do banco (igual ao botão "Atualizar"). |
+| **[4]** | Mostra as últimas mensagens do servidor. |
+| **[5]** | Altera a porta (aplicada ao reiniciar). |
+| **[6]** | Liga ou desliga o **modo sempre ativo** (abaixo). |
+| **[0]** | Encerra o servidor. |
+
+### Modo sempre ativo (opcional, com código)
+
+Mantém o Consulta Estoque no ar o tempo todo, para que a página esteja sempre disponível na loja. Ao ligar pela opção **[6]**, você define um **código**. A partir daí:
+
+- o servidor **inicia junto com o Windows** (sem precisar de administrador);
+- um **guardião** reabre o servidor automaticamente se ele cair;
+- fechar a janela **sem o código** apenas a **minimiza** — o servidor continua rodando;
+- para **desligar o modo** ou **encerrar de vez**, é preciso digitar o **código**.
+
+O modo é pensado para evitar que o servidor seja fechado **por acidente**, e é sempre reversível: você pode desligá-lo com o código e, em último caso, encerrar os processos (`ConsultaEstoque` e o guardião) pelo **Gerenciador de Tarefas**. O guardião reabre apenas o servidor; ele não se reinicia sozinho e para assim que o modo é desligado. O programa **não** bloqueia o Gerenciador de Tarefas, **não** se esconde e **não** se marca como processo crítico.
+
+> Anote o código em um lugar seguro: sem ele, o modo sempre ativo não pode ser desligado pelo menu (só encerrando os processos pelo Gerenciador de Tarefas e apagando a entrada de inicialização).
 
 Os arquivos de dados (`config.json`, `usados-estoque.json` e `lista-personalizada.json`) ficam **na mesma pasta do `.exe`**. Para atualizar o sistema, basta substituir o `.exe`; os dados são mantidos.
 
 ### Comportamentos do executável
 
+- **Flags de linha de comando:** `--sem-menu` (roda sem o menu), `--sem-navegador` (não abre o navegador), `--inicio-automatico` e `--guardiao` (usadas internamente pelo modo sempre ativo).
 - **Segunda execução:** se o servidor já estiver aberto, o `.exe` apenas abre o navegador nele e fecha a nova janela.
 - **Navegador:** para não abrir o navegador ao iniciar, adicione `"abrirNavegador": false` ao `config.json` ou execute com `--sem-navegador`.
 - **Erro ao iniciar** (ex.: porta usada por outro programa): a janela permanece aberta até você pressionar Enter, para que a mensagem possa ser lida.
@@ -36,13 +64,24 @@ Os arquivos de dados (`config.json`, `usados-estoque.json` e `lista-personalizad
 
 ## Como gerar o executável
 
-### Pelo GitHub (recomendado)
+### Com dois cliques (recomendado)
+
+Dê dois cliques em **`gerar-executavel.bat`**, nesta pasta. Não é preciso instalar nada nem digitar comandos. Ele:
+
+1. Na primeira vez, baixa um **Node.js portátil** (cerca de 30 MB) para dentro desta pasta, sem instalar nada no Windows e sem pedir administrador, e confere o SHA-256 com a lista oficial do nodejs.org.
+2. Na primeira vez, instala as ferramentas de construção.
+3. Gera os executáveis de **64 e 32 bits**.
+4. Abre a pasta **`dist`** com os arquivos prontos.
+
+Das próximas vezes, o processo é mais rápido, porque o Node.js portátil e as ferramentas já estão na pasta. É necessária conexão com a internet na primeira execução. Sem ela, o `.bat` tenta usar um Node.js 22 ou superior já instalado no PC.
+
+### Pelo GitHub
 
 Na aba **Actions** do repositório, abra **Gerar executável** e clique em **Run workflow**. Ao terminar, os `.exe` ficam disponíveis em **Artifacts**, na página da execução. Ao publicar uma tag `v*` (ex.: `v5.45.0`), o mesmo processo cria uma *Release* com os arquivos anexados.
 
-### Localmente
+### Por linha de comando
 
-Requer o Node.js 22 ou superior, em Windows ou Linux:
+Para quem já tem o Node.js 22 ou superior, em Windows ou Linux:
 
 ```bash
 cd executavel
