@@ -9,21 +9,31 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.52.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.53.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.30.1**.
-- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.11.0**.
+- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.12.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
 - [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.1**.
-- [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. Versão atual **1.0.0**.
-- [`executavel/gerar-executavel.bat`](#executavelgerar-executavelbat): Gera os executáveis com dois cliques. Versão atual **1.0.0**.
-- [`executavel/consola.js`](#executavelconsolajs): Painel do executável (menu e modo sempre ativo). Versão atual **1.0.0**.
+- [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. **Removido** (o aplicativo para Windows agora é o [consulta-estoque-desktop](https://github.com/RudaGabriel/consulta-estoque-desktop)).
+- [`executavel/gerar-executavel.bat`](#executavelgerar-executavelbat): Gera os executáveis com dois cliques. **Removido**.
+- [`executavel/consola.js`](#executavelconsolajs): Painel do executável (menu e modo sempre ativo). **Removido**.
 
 ---
 
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.53.0 (2026-11-10)
+
+```text
+Modo executável (.exe) removido: o aplicativo para Windows agora é o
+  projeto dedicado consulta-estoque-desktop. Saem o painel/menu no console,
+  o modo sempre ativo (guardião), a janela de aplicativo do Edge/Chrome, o
+  log em arquivo do .exe e a detecção do Node SEA. O servidor continua igual
+  pelo consulta-estoque.bat.
+```
 
 ### 5.52.0 (2026-11-09)
 
@@ -726,6 +736,13 @@ Passa a rodar as verificacoes de integridade
 
 _Suíte de testes_
 
+### 2.12.0 (2026-11-10)
+
+```text
+Removidos os testes do painel do executável (executavel/consola.js), que
+  saiu do projeto junto com o .exe. 132 testes.
+```
+
 ### 2.11.0 (2026-11-09)
 
 ```text
@@ -855,6 +872,14 @@ Quebras de linha convertidas para
 
 _Gerador do executável único para Windows_
 
+### Removido (2026-11-10)
+
+```text
+Removido junto com o executável: o aplicativo para Windows agora é o projeto
+  dedicado consulta-estoque-desktop. Também saiu o workflow
+  .github/workflows/gerar-executavel.yml.
+```
+
 ### 1.0.0 (2026-11-09)
 
 ```text
@@ -872,6 +897,14 @@ do arquivo (nome, versão, autor) gravadas com o resedit.
 
 _Gera os executáveis com dois cliques_
 
+### Removido (2026-11-10)
+
+```text
+Removido junto com o executável: o aplicativo para Windows agora é o projeto
+  dedicado consulta-estoque-desktop. Também saiu o workflow
+  .github/workflows/gerar-executavel.yml.
+```
+
 ### 1.0.0 (2026-11-09)
 
 ```text
@@ -887,6 +920,14 @@ bits e abre a pasta com o resultado.
 ## executavel/consola.js
 
 _Painel do executável (menu e modo sempre ativo)_
+
+### Removido (2026-11-10)
+
+```text
+Removido junto com o executável: o aplicativo para Windows agora é o projeto
+  dedicado consulta-estoque-desktop. Também saiu o workflow
+  .github/workflows/gerar-executavel.yml.
+```
 
 ### 1.0.0 (2026-11-09)
 

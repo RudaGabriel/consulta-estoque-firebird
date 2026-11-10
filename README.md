@@ -6,6 +6,8 @@ Sistema web local para **consultar o estoque disponível** de um ERP **SmallSoft
 
 Ele roda num PC da loja e é acessado pelo navegador, nessa máquina ou em qualquer outra da mesma rede. **Nunca escreve no banco do ERP:** só lê.
 
+> Procurando um aplicativo de Windows só para **consultar preço e estoque** com leitor de código de barras? Use o projeto dedicado **[consulta-estoque-desktop](https://github.com/RudaGabriel/consulta-estoque-desktop)**. O executável (`.exe`) deste projeto foi descontinuado.
+
 ---
 
 ## Sumário
@@ -17,7 +19,6 @@ Ele roda num PC da loja e é acessado pelo navegador, nessa máquina ou em qualq
 - [Como o estoque é lido do banco](#como-o-estoque-é-lido-do-banco)
 - [Requisitos](#requisitos)
 - [Instalação e uso](#instalação-e-uso)
-- [Executável para Windows (.exe)](#executável-para-windows-exe)
 - [Configuração (`config.json`)](#configuração-configjson)
 - [Arquivos do projeto](#arquivos-do-projeto)
 - [Arquivos gerados em uso](#arquivos-gerados-em-uso)
@@ -148,17 +149,6 @@ node consulta-estoque.js
 
 ---
 
-## Executável para Windows (.exe)
-
-Alternativa ao `.bat`: um **único arquivo `.exe`** com o Node.js e o `node-firebird` embutidos, sem instalar nada no PC.
-
-- `ConsultaEstoque-<versão>-win-x64.exe`: Windows 10 e 11 de 64 bits.
-- `ConsultaEstoque-<versão>-win-x86.exe`: Windows 10 de 32 bits, para PCs antigos ou mais fracos.
-
-Copie o `.exe` para uma pasta e dê dois cliques. Ele abre o navegador sozinho, e os dados ficam na pasta do `.exe`. Para gerar os executáveis, dê dois cliques em **`executavel/gerar-executavel.bat`**: ele baixa o que for preciso, gera os dois `.exe` e abre a pasta com o resultado, sem nenhum comando. Também é possível gerá-los pelo GitHub Actions (**Actions > Gerar executável**). Veja o [README do executável](executavel/README.md) para os detalhes.
-
----
-
 ## Configuração (`config.json`)
 
 O arquivo é **opcional**: sem ele, o sistema detecta o banco sozinho. Quase todos os campos também podem ser alterados pela tela **Configurações**.
@@ -209,8 +199,6 @@ Arquivos com BOM ou com números escritos com zero à esquerda (ex.: `03050`) s�
 | `node-firebird.bat` | Instalador avulso do Node.js e do `node-firebird`. |
 | `consulta-estoque_test.js` | Suíte de testes do motor e do servidor. |
 | `validar-client.js` | Valida a sintaxe do JavaScript da interface, que fica dentro de uma string do servidor. |
-| `executavel/` | Projeto separado que gera o executável único para Windows (`construir.js`, `package.json` e README próprio). |
-| `.github/workflows/gerar-executavel.yml` | Gera os executáveis no GitHub Actions e, em tags `v*`, publica a Release. |
 
 ---
 

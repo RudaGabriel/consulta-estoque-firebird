@@ -5,11 +5,10 @@
  *
  * @author Ruda Gabriel
  *
- * @version 2.11.0
+ * @version 2.12.0
  * @changelog
- *   2.11.0 - 2026-11-09 - Testes da descoberta 5.52: só SMALL.FDB, caminhos
- *     sem aliases, servidor em caminho UNC e em atalho .lnk, banco local
- *     adotado sozinho marcado para nova busca e leitura de rede com prazo.
+ *   2.12.0 - 2026-11-10 - Removidos os testes do painel do executável
+ *     (executavel/consola.js), que saiu do projeto junto com o .exe.
  *
  * EXECUÇÃO:
  *   node --test consulta-estoque_test.js
@@ -935,34 +934,6 @@ describe("estoque mínimo — regra única: depois do uso nunca fica abaixo do m
             assert.ok(grupos.some(g => g.itens.some(i => i.codigo === "C")), "C (mínimo + 1) deve poder entrar");
             done();
         }, null, null, { estoqueMinimo: 5, proibidosEmbutidos: [], proibidosExtra: [] });
-    });
-});
-
-describe("executavel/consola.js — painel do executável", () => {
-    const consola = require("./executavel/consola.js");
-
-    test("hashCodigo é estável por (código, salt) e sensível aos dois", () => {
-        const salt = consola.gerarSalt();
-        assert.equal(consola.hashCodigo("1234", salt), consola.hashCodigo("1234", salt));
-        assert.notEqual(consola.hashCodigo("1234", salt), consola.hashCodigo("9999", salt));
-        assert.notEqual(consola.hashCodigo("1234", salt), consola.hashCodigo("1234", consola.gerarSalt()));
-        assert.equal(consola.gerarSalt().length, 16);
-    });
-
-    test("renderMenu monta um quadro com todas as linhas da mesma largura", () => {
-        const m = consola.renderMenu({ appName: "Consulta Estoque", porta: 7888, itens: 1234,
-            conectado: true, erro: "", sempreAtivo: false });
-        const visiveis = m.split("\n").filter(l => l.trim())
-            .map(l => [...l.replace(/\u001b\[[0-9;]*m/g, "")].length);
-        assert.equal(new Set(visiveis).size, 1, "todas as linhas do quadro têm a mesma largura");
-        assert.ok(m.includes("[0] Sair") && m.includes("Modo sempre ativo"));
-    });
-
-    test("renderMenu reflete o estado (sem banco e modo ligado)", () => {
-        const m = consola.renderMenu({ appName: "X", porta: 9000, itens: 0,
-            conectado: false, erro: "sem conexão", sempreAtivo: true });
-        assert.ok(m.includes("sem banco"));
-        assert.ok(/Modo sempre ativo:.*LIGADO/.test(m.replace(/\u001b\[[0-9;]*m/g, "")));
     });
 });
 
