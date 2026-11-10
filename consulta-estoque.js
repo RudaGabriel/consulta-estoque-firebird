@@ -5,21 +5,13 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.52.0
+ * @version 5.53.0
  * @changelog
- *   5.52.0 - 2026-11-09 - Busca automática do banco: REDE PRIMEIRO e só SMALL.FDB.
- *     - Só aceita arquivos chamados SMALL.FDB (antes adotava padrao.fdb,
- *       exemplo.fdb etc. desta máquina, que abrem mas não são o banco da loja).
- *     - O Firebird desta máquina (127.0.0.1) virou a ÚLTIMA opção; os IPs e o
- *       nome desta máquina nunca contam como "servidor da rede".
- *     - Novas pistas do servidor: unidades de rede mapeadas (ex.: H: →
- *       \\SERVIDOR\SmallSoft), .ini/.cfg lidos nos compartilhamentos
- *       (\\SERVIDOR\SmallSoft\Small Commerce), atalhos do Small Commerce na
- *       Área de Trabalho/Menu Iniciar e o nome "SERVIDOR". O servidor é gravado
- *       pelo NOME (não muda quando o IP muda).
- *     - Banco local adotado sozinho por versão anterior: ao iniciar, procura de
- *       novo o servidor da rede e troca a configuração se achar.
- *     - Leituras em pastas de rede com prazo (servidor fora do ar não trava).
+ *   5.53.0 - 2026-11-10 - Modo executável (.exe) removido: o aplicativo para
+ *     Windows agora é o projeto dedicado consulta-estoque-desktop. Saem o
+ *     painel/menu no console, o modo sempre ativo (guardião), a janela de
+ *     aplicativo do Edge/Chrome, o log em arquivo do .exe e a detecção do Node
+ *     SEA. O servidor continua igual pelo consulta-estoque.bat.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
  * NÃO depende de gerar-relatorio-html.js nem servidor-relatorio.js.
@@ -37,12 +29,7 @@
 // Executado direto (node consulta-estoque.js) → sobe o servidor. Importado via
 // require() (testes) → só expõe os helpers puros, sem abrir porta, sem
 // conectar no banco e sem encerrar o processo por falta do node-firebird.
-// Executável único (.exe gerado por executavel/construir.js com o Node SEA):
-// o script roda embutido no node.exe e sempre deve subir o servidor.
-const EXECUTAVEL = (() => {
-    try { return require("node:sea").isSea(); } catch (_) { return false; }
-})();
-const EXECUCAO_DIRETA = EXECUTAVEL || require.main === module;
+const EXECUCAO_DIRETA = require.main === module;
 
 let Firebird = null;
 try {
@@ -66,7 +53,7 @@ const http = require("http");
 // ─────────────────────────────────────────────────────────────────────────────
 // Pasta dos dados (config.json, usados, lista personalizada): a do script ou,
 // no executável, a do próprio .exe — o conteúdo embutido é somente leitura.
-const PASTA_DADOS = EXECUTAVEL ? path.dirname(process.execPath) : __dirname;
+const PASTA_DADOS = __dirname;
 const CONFIG_PATH = path.join(PASTA_DADOS, "config.json");
 const USADOS_PATH = path.join(PASTA_DADOS, "usados-estoque.json");
 const LISTA_PERSONALIZADA_PATH = path.join(PASTA_DADOS, "lista-personalizada.json");
@@ -170,32 +157,11 @@ function identificadorSqlValido(nome) {
 // CONSULTA_ESTOQUE_LOG=1 reativa quando for preciso depurar um teste.
 const _LOG_SILENCIOSO = !EXECUCAO_DIRETA && process.env.CONSULTA_ESTOQUE_LOG !== "1";
 
-// Buffer das últimas mensagens e registro em arquivo — só no executável, para
-// o menu poder exibir o histórico ([4]) sem embaralhar a tela. _menuAtivo true
-// enquanto o menu está na frente: as mensagens vão para o buffer/arquivo, não
-// para a tela.
-const _bufferLog = [];
-let _menuAtivo = false;
-function _anexarLogArquivo(linha) {
-    if (!EXECUTAVEL) return;
-    try {
-        const arq = path.join(PASTA_DADOS, "consulta-estoque.log");
-        try { if (fs.statSync(arq).size > 5 * 1024 * 1024) fs.unlinkSync(arq); } catch (_) {}
-        fs.appendFileSync(arq, linha);
-    } catch (_) {}
-}
-
 function logTs(msg, nivel) {
     if (_LOG_SILENCIOSO) return;
     const d = new Date();
     const hora = "[" + p2(d.getHours()) + ":" + p2(d.getMinutes()) + ":" + p2(d.getSeconds()) + "] ";
     const linha = hora + String(msg) + "\n";
-    if (EXECUTAVEL) {
-        _bufferLog.push(hora + String(msg));
-        if (_bufferLog.length > 300) _bufferLog.shift();
-        _anexarLogArquivo(linha);
-        if (_menuAtivo) return; // não embaralha o menu; histórico fica no buffer/arquivo
-    }
     if (nivel === "erro") process.stderr.write(linha);
     else process.stdout.write(linha);
 }
@@ -7206,170 +7172,11 @@ function _encerrarProcesso(motivo, codigo) {
     logTs("Encerrando servidor (" + motivo + ")...");
     _gravadorUsados.descarregarSync();
     _gravadorLista.descarregarSync();
-    // Executável aberto com duplo clique: num erro, a janela fecharia antes de
-    // a mensagem ser lida. Espera o Enter (ou 2 minutos) antes de sair.
-    if (EXECUTAVEL && codigo !== 0 && process.stdin && process.stdin.isTTY) {
-        logTs("Pressione Enter para fechar esta janela.");
-        setTimeout(() => process.exit(codigo), 120000).unref();
-        try {
-            process.stdin.resume();
-            process.stdin.once("data", () => process.exit(codigo));
-        } catch (_) { process.exit(codigo); }
-        return;
-    }
     process.exit(codigo);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MODO EXECUTÁVEL (.exe): navegador, título e console
-// ─────────────────────────────────────────────────────────────────────────────
-// Abre a URL no navegador padrão sem criar janela de console extra. Falha é
-// apenas registrada: a interface continua acessível pelo endereço exibido.
-function _abrirNavegador(url) {
-    try {
-        const { spawn } = require("child_process");
-        const opcoes = { detached: true, stdio: "ignore", windowsHide: true };
-        let filho;
-        if (process.platform === "win32") filho = spawn("cmd.exe", ["/c", "start", "", url], opcoes);
-        else if (process.platform === "darwin") filho = spawn("open", [url], opcoes);
-        else filho = spawn("xdg-open", [url], opcoes);
-        filho.on("error", e => logTs("AVISO: n\u00e3o foi poss\u00edvel abrir o navegador (" + e.message + "). Acesse " + url));
-        filho.unref();
-    } catch (e) {
-        logTs("AVISO: n\u00e3o foi poss\u00edvel abrir o navegador (" + _mensagemErro(e) + "). Acesse " + url);
-    }
-}
-
-// Abre a interface numa JANELA DE APLICATIVO (sem abas nem barra de endereço),
-// usando o Edge (já presente no Windows 10/11) ou o Chrome em modo --app. Um
-// perfil próprio garante uma janela limpa, separada do navegador do usuário.
-// Sem Edge/Chrome, cai para o navegador padrão.
-function _abrirJanelaApp(url) {
-    if (process.platform !== "win32") return _abrirNavegador(url);
-    try {
-        const pf   = process.env["ProgramFiles"] || "C:\\Program Files";
-        const pf86 = process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)";
-        const local = process.env["LOCALAPPDATA"] || "";
-        const candidatos = [
-            path.join(pf86, "Microsoft\\Edge\\Application\\msedge.exe"),
-            path.join(pf,   "Microsoft\\Edge\\Application\\msedge.exe"),
-            path.join(pf,   "Google\\Chrome\\Application\\chrome.exe"),
-            path.join(pf86, "Google\\Chrome\\Application\\chrome.exe"),
-            local ? path.join(local, "Google\\Chrome\\Application\\chrome.exe") : null
-        ].filter(Boolean);
-        let exe = null;
-        for (const c of candidatos) { try { if (fs.existsSync(c)) { exe = c; break; } } catch (_) {} }
-        if (!exe) {
-            logTs("Edge/Chrome n\u00e3o encontrado \u2014 abrindo no navegador padr\u00e3o.");
-            return _abrirNavegador(url);
-        }
-        const perfil = path.join(local || PASTA_DADOS, "ConsultaEstoque", "janela-app");
-        const args = [
-            "--app=" + url,
-            "--user-data-dir=" + perfil,
-            "--no-first-run",
-            "--no-default-browser-check",
-            "--window-size=1200,820"
-        ];
-        const { spawn } = require("child_process");
-        const filho = spawn(exe, args, { detached: true, stdio: "ignore", windowsHide: false });
-        filho.on("error", () => _abrirNavegador(url));
-        filho.unref();
-        logTs("Interface aberta em janela de aplicativo.");
-    } catch (e) {
-        logTs("AVISO: falha ao abrir a janela de aplicativo (" + _mensagemErro(e) + ").");
-        _abrirNavegador(url);
-    }
-}
-
-// Decide como mostrar a interface: janela de aplicativo (padrão) ou navegador
-// comum (config.json "janelaApp": false, ou a flag --navegador-comum).
-function _abrirUI(url) {
-    const forcarNavegador = cfg.janelaApp === false || process.argv.indexOf("--navegador-comum") !== -1;
-    return forcarNavegador ? _abrirNavegador(url) : _abrirJanelaApp(url);
-}
-
-// Windows: com o QuickEdit ligado, um clique no console inicia uma seleção que
-// CONGELA a escrita no console — e, com ela, o servidor inteiro. Desliga só
-// para esta janela (mesmo ajuste do consulta-estoque.bat). O PowerShell herda
-// o console (stdin) e não cria janela; falha é ignorada.
-function _desativarQuickEditWindows() {
-    if (process.platform !== "win32" || !process.stdin || !process.stdin.isTTY) return;
-    const ps = [
-        "try {",
-        "Add-Type -Namespace Estoque -Name Con -MemberDefinition '",
-        "[DllImport(\"kernel32.dll\")] public static extern System.IntPtr GetStdHandle(int n);",
-        "[DllImport(\"kernel32.dll\")] public static extern bool GetConsoleMode(System.IntPtr h, out uint m);",
-        "[DllImport(\"kernel32.dll\")] public static extern bool SetConsoleMode(System.IntPtr h, uint m);';",
-        "$h = [Estoque.Con]::GetStdHandle(-10); $m = [uint32]0;",
-        "if ([Estoque.Con]::GetConsoleMode($h, [ref]$m)) {",
-        "$novo = ($m -bor 0x80) -bxor ($m -band 0x40); [void][Estoque.Con]::SetConsoleMode($h, [uint32]$novo) }",
-        "} catch { }"
-    ].join(" ");
-    try {
-        const { spawn } = require("child_process");
-        // -EncodedCommand (UTF-16LE em Base64): nenhuma aspa passa pela linha de comando.
-        const cod = Buffer.from(ps, "utf16le").toString("base64");
-        const filho = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", cod],
-            { stdio: ["inherit", "ignore", "ignore"], windowsHide: true });
-        filho.on("error", () => {});
-    } catch (_) { /* sem PowerShell: segue com o QuickEdit como estiver */ }
-}
-
-// Porta ocupada no executável: se for uma instância deste mesmo servidor (ex.:
-// duplo clique de novo), só abre o navegador nela e fecha esta, sem erro.
-function _verificarInstanciaExistente(callback) {
-    const req = http.get({ host: "127.0.0.1", port: PORTA, path: "/api/status", timeout: 2000 }, res => {
-        res.resume();
-        callback(res.statusCode === 200);
-    });
-    req.on("timeout", () => { req.destroy(); });
-    req.on("error", () => callback(false));
-}
-
-// Instancia o painel do executável (menu + guardião), injetando o que ele
-// precisa do servidor. Memoizado: um só painel por processo.
-let _painelCache = null;
-function _painelExecutavel() {
-    if (_painelCache) return _painelCache;
-    const consola = require("./executavel/consola.js");
-    _painelCache = consola.criarPainel({
-        fs, path,
-        APP_NAME,
-        PASTA_DADOS,
-        CONFIG_PATH,
-        execPath: process.execPath,
-        ehExecutavel: EXECUTAVEL,
-        scriptPath: __filename,
-        bufferLog: _bufferLog,
-        logTs,
-        lerConfig: _lerConfigParaMerge,
-        salvarConfig: (obj) => _gravarJsonAtomicoSync(CONFIG_PATH, obj),
-        abrirNavegador: _abrirUI,
-        verificarInstancia: _verificarInstanciaExistente,
-        solicitarRecarga: _solicitarRecarga,
-        encerrar: _encerrarProcesso,
-        estado: () => ({ porta: PORTA, itens: _itensBrutos.length, conectado: !_erroConexao, erro: _erroConexao || "" })
-    });
-    return _painelCache;
 }
 
 function iniciarServidor() {
     server.on("error", err => {
-        if (err.code === "EADDRINUSE" && EXECUTAVEL) {
-            _verificarInstanciaExistente(ativa => {
-                if (ativa) {
-                    logTs(APP_NAME + " j\u00e1 est\u00e1 em execu\u00e7\u00e3o na porta " + PORTA + ". Abrindo o navegador...");
-                    _abrirNavegador("http://localhost:" + PORTA);
-                    setTimeout(() => process.exit(0), 1500);
-                    return;
-                }
-                logErro("ERRO: A porta " + PORTA + " est\u00e1 em uso por outro programa.");
-                logTs("Defina outra porta em 'portaEstoque' no config.json, na pasta do execut\u00e1vel.");
-                _encerrarProcesso("porta em uso", 1);
-            });
-            return;
-        }
         if (err.code === "EADDRINUSE") {
             logErro("ERRO: Porta " + PORTA + " j\u00e1 est\u00e1 em uso.");
             logTs("Adicione 'portaEstoque': XXXX no config.json para usar outra porta.");
@@ -7399,31 +7206,6 @@ function iniciarServidor() {
         logTs("Limite: " + _cfgVivo.maxItens + " itens | Proibidos: " + _proibidosAtivos.length + " termos");
         logTs("\u2550".repeat(50));
 
-        if (EXECUTAVEL) {
-            logTs("Dados e configura\u00e7\u00f5es: " + PASTA_DADOS);
-            try { process.title = APP_NAME + " - porta " + PORTA; } catch (_) {}
-            _desativarQuickEditWindows();
-            // Sem menu quando: iniciado em segundo plano (guardião/Windows),
-            // pedido explicitamente (--sem-menu) ou sem console interativo (TTY).
-            const temTTY = !!(process.stdin && process.stdin.isTTY);
-            const semMenu = process.argv.indexOf("--sempre-ativo") !== -1 ||
-                            process.argv.indexOf("--inicio-automatico") !== -1 ||
-                            process.argv.indexOf("--sem-menu") !== -1 ||
-                            !temTTY;
-            if (cfg.abrirNavegador !== false && process.argv.indexOf("--sem-navegador") === -1 && !semMenu) {
-                _abrirUI("http://localhost:" + PORTA);
-            }
-            if (semMenu) {
-                // Iniciado pelo guardião ou pela inicialização do Windows: sem menu
-                // interativo; mensagens no arquivo de log e janela minimizada.
-                logTs("Modo sempre ativo: servidor em segundo plano. Registro em consulta-estoque.log.");
-                _painelExecutavel().minimizar();
-            } else {
-                _menuAtivo = true;
-                _painelExecutavel().iniciarMenu();
-            }
-        }
-
         carregarItens().then(ok => {
             // Banco adotado sozinho NESTA máquina (ou arquivo que não é SMALL.FDB):
             // procura de novo, com o servidor da rede em primeiro lugar.
@@ -7445,13 +7227,7 @@ function iniciarServidor() {
     });
 }
 
-if (EXECUCAO_DIRETA) {
-    if (EXECUTAVEL && process.argv.indexOf("--guardiao") !== -1) {
-        _painelExecutavel().rodarGuardiao();
-    } else {
-        iniciarServidor();
-    }
-}
+if (EXECUCAO_DIRETA) iniciarServidor();
 
 // Helpers puros expostos para a suíte de testes (sem efeitos colaterais).
 module.exports = {
