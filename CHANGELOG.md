@@ -9,10 +9,10 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.53.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.54.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
-- [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.30.1**.
-- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.12.0**.
+- [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.31.0**.
+- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.13.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
 - [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.1**.
 - [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. **Removido** (o aplicativo para Windows agora é o [consulta-estoque-desktop](https://github.com/RudaGabriel/consulta-estoque-desktop)).
@@ -24,6 +24,21 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.54.0 (2026-11-10)
+
+```text
+Modo Automático:
+  - Novo "Valor de referência": Normal (preço de venda, como sempre) ou
+    Custo de compra (custo de compra + 10%). No modo custo, cada código sai
+    com o valor usado, ex.: "268,00 DEBITO  10014 (R$149,05) 10011 (R$99,00)
+    10002 (R$20,02)". Itens sem custo ficam de fora; o motor de combinação
+    (Agrupar/Combinar, estoque mínimo, lista personalizada, reaproveitamento)
+    funciona igual. A escolha fica guardada no navegador.
+  - O servidor lê o custo de compra (CUSTOCOMPR no Small Commerce, ou
+    CUSTO_COMPRA/PRECO_CUSTO/CUSTOMEDIO...) e o envia à tela.
+  - Com resultado, a tela rola até o botão "Copiar resultado".
+```
 
 ### 5.53.0 (2026-11-10)
 
@@ -672,6 +687,17 @@ Modo Agrupar (encontrarGruposAsync) não funcionava
 
 _Inicializador para Windows_
 
+### 5.31.0 (2026-11-10)
+
+```text
+Nenhuma interação com a janela: verificação com falha segue sozinha em
+  5 s; servidor antigo na mesma porta é encerrado e substituído sem
+  perguntar; servidor que cai reinicia sozinho (até 5 vezes seguidas; a
+  contagem zera após ~1 minuto de pé); se outra janela assumiu a porta, esta
+  avisa e fecha; erros fatais mostram a mensagem e a janela fecha sozinha em
+  60 s (sem "pressione uma tecla").
+```
+
 ### 5.30.1 (2026-11-05)
 
 ```text
@@ -735,6 +761,14 @@ Passa a rodar as verificacoes de integridade
 ## consulta-estoque_test.js
 
 _Suíte de testes_
+
+### 2.13.0 (2026-11-10)
+
+```text
+Testes do custo de compra (5.54): coluna CUSTOCOMPR detectada, CUSTO nas
+  duas consultas (NULL sem a coluna), custo arredondado no item e na lista
+  personalizada. 136 testes.
+```
 
 ### 2.12.0 (2026-11-10)
 

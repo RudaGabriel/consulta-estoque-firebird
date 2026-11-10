@@ -5,13 +5,20 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.53.0
+ * @version 5.54.0
  * @changelog
- *   5.53.0 - 2026-11-10 - Modo executável (.exe) removido: o aplicativo para
- *     Windows agora é o projeto dedicado consulta-estoque-desktop. Saem o
- *     painel/menu no console, o modo sempre ativo (guardião), a janela de
- *     aplicativo do Edge/Chrome, o log em arquivo do .exe e a detecção do Node
- *     SEA. O servidor continua igual pelo consulta-estoque.bat.
+ *   5.54.0 - 2026-11-10 - Modo Automático:
+ *     - Novo "Valor de referência": Normal (preço de venda, como sempre) ou
+ *       Custo de compra (custo de compra + 10%). No modo custo, o pool recebe
+ *       cópias dos itens com esse valor e o motor de combinação funciona igual
+ *       (Agrupar/Combinar, estoque mínimo, lista personalizada,
+ *       reaproveitamento); cada código sai com o valor usado, ex.:
+ *       "10014 (R$149,05) 10011 (R$99,00)". Itens sem custo ficam de fora.
+ *     - O servidor lê o custo de compra (CUSTOCOMPR no Small Commerce, ou
+ *       CUSTO_COMPRA/PRECO_CUSTO/CUSTOMEDIO...) na consulta principal e na da
+ *       lista personalizada, e o envia à tela (item.custo).
+ *     - Com resultado, a tela rola até o botão "Copiar resultado"
+ *       (scrollIntoView em #autoCopyBtn).
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
  * NÃO depende de gerar-relatorio-html.js nem servidor-relatorio.js.
@@ -1654,6 +1661,8 @@ const COLUNAS_CANDIDATAS = Object.freeze({
             "QT", "QUANTIDADE", "QUANTIDADEATU", "QTREAL", "ESTOQUEREAL", "ESTOQUEEFETIVO"],
     bar:   ["CODBARRAS", "EAN", "BARRAS", "CODBARRA", "CODEAN", "BARCODE", "EAN13", "REFERENCIA"],
     prc:   ["PRECO", "PRECO1", "PVENDA", "PRECOVENDA", "PRECO_VENDA", "VAL_VEND", "PRECOUNIT", "PRECOUNITARIO"],
+    // Custo de compra (Modo Automático "Custo de compra"): no Small Commerce é CUSTOCOMPR.
+    cst:   ["CUSTOCOMPR", "CUSTO_COMPRA", "CUSTOCOMPRA", "PRECO_CUSTO", "PRECOCUSTO", "PCUSTO", "VALORCUSTO", "CUSTOMEDIO", "CUSTO_MEDIO", "CUSTO"],
     ultV:  ["ULT_VENDA", "ULTVENDA", "ULTIMAVENDA", "ULTIMA_VENDA", "DTVENDA", "DT_VENDA", "ULTIMOSAIDA", "ULTIMA_SAIDA"],
     ativo: ["ATIVO", "ATIVADO", "SITUACAO", "STATUS"]
 });
@@ -1682,6 +1691,7 @@ function _expressoesSql(cols) {
         est:  "CAST(p." + cols.est + " AS DOUBLE PRECISION)",
         bar:  cols.bar  ? "TRIM(CAST(p." + cols.bar + " AS VARCHAR(60)))" : "CAST('' AS VARCHAR(60))",
         prc:  cols.prc  ? "CAST(p." + cols.prc + " AS DOUBLE PRECISION)" : "CAST(0.00 AS DOUBLE PRECISION)",
+        cst:  cols.cst  ? "CAST(p." + cols.cst + " AS DOUBLE PRECISION)" : "CAST(NULL AS DOUBLE PRECISION)",
         ultV: cols.ultV ? "CAST(p." + cols.ultV + " AS DATE)"            : "CAST(NULL AS DATE)",
         // ATIVO em VARCHAR(255), não VARCHAR(1): colunas SITUACAO/STATUS com
         // texto ("ATIVO", "INATIVO") estouravam o CAST e a query inteira
@@ -1709,6 +1719,7 @@ function _montarSqlPrincipal(nomTabela, cols) {
         "  " + ex.bar  + " AS CODBARRAS,",
         "  " + ex.est  + " AS ESTOQUE,",
         "  " + ex.prc  + " AS PRECO,",
+        "  " + ex.cst  + " AS CUSTO,",
         "  " + ex.ultV + " AS ULTIMAVENDA",
         "FROM " + nomTabela + " p",
         "WHERE " + ex.est + " > 0",
@@ -1727,6 +1738,7 @@ function _montarSqlListaPersonalizada(nomTabela, cols, qtdParametros) {
         "  " + ex.desc  + " AS DESCRICAO,",
         "  " + ex.est   + " AS ESTOQUE,",
         "  " + ex.prc   + " AS PRECO,",
+        "  " + ex.cst   + " AS CUSTO,",
         "  " + ex.ativo + " AS ATIVO",
         "FROM " + nomTabela + " p",
         "WHERE " + ex.cod + " IN (" + new Array(qtdParametros).fill("?").join(",") + ")"
@@ -1763,10 +1775,12 @@ function _reconciliarListaPersonalizada(lista, rows, temColunaAtivo) {
         if (!codDB || porCodigoExato.has(codDB)) continue;
         const est  = Number(row.ESTOQUE != null ? row.ESTOQUE : NaN);
         const prc  = Number(row.PRECO   != null ? row.PRECO   : NaN);
+        const cst  = Number(row.CUSTO   != null ? row.CUSTO   : NaN);
         const desc = String(row.DESCRICAO || "").trim();
         const registro = {
             estoque:   Number.isFinite(est) ? Math.round(est * 1000) / 1000 : null,
             preco:     Number.isFinite(prc) ? Math.round(prc * 100)  / 100  : null,
+            custo:     Number.isFinite(cst) ? Math.round(cst * 100)  / 100  : null,
             descricao: desc || null,
             // null = banco sem coluna de status ("não dá pra verificar"), nunca "inativo"
             ativo:     temColunaAtivo ? !_valorColunaIndicaInativo(row.ATIVO) : null
@@ -1850,12 +1864,15 @@ function _processarLinhasPrincipais(rows, estoqueMinimo, maxItens) {
         if (codigosVistos.has(cod)) continue;
         codigosVistos.add(cod);
         const preco = Number(row.PRECO || 0);
+        const custo = row.CUSTO == null ? NaN : Number(row.CUSTO);
         const item = {
             codigo:      cod,
             descricao:   desc,
             codbarras:   String(row.CODBARRAS || "").trim(),
             estoque:     estArredondado,
             preco:       Number.isFinite(preco) ? Math.round(preco * 100) / 100 : 0,
+            // null = banco sem coluna de custo (ou custo vazio)
+            custo:       Number.isFinite(custo) ? Math.round(custo * 100) / 100 : null,
             ultimaVenda: row.ULTIMAVENDA ? toISO(row.ULTIMAVENDA) : null
         };
         (estArredondado >= estoqueMinimo ? itensAcima : itensAbaixo).push(item);
@@ -1969,6 +1986,7 @@ async function _executarCarga(gen) {
                 "EST="    + (cols.est   || "?"),
                 "BAR="    + (cols.bar   || "-"),
                 "PRECO="  + (cols.prc   || "-"),
+                "CUSTO="  + (cols.cst   || "-"),
                 "ULTV="   + (cols.ultV  || "-"),
                 "ATIVO="  + (cols.ativo || "-")
             ].join(" | ");
@@ -2356,6 +2374,12 @@ td{padding:7px 12px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis
   padding:24px 26px;max-width:680px;width:95%;box-shadow:var(--shadow);
   transform:translateY(-12px);transition:transform .2s;display:flex;flex-direction:column;gap:14px;max-height:90vh;overflow-y:auto}
 .auto-ov.on .auto-bx{transform:translateY(0)}
+.auto-base{display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px}
+.auto-base .cl{margin:0}
+.auto-base-op{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px;color:var(--txt);padding:5px 10px;border:1px solid var(--brd);border-radius:8px;user-select:none}
+.auto-base-op small{color:var(--txt3);font-size:11px}
+.auto-base-op input{accent-color:var(--acc);margin:0}
+.auto-base-op:has(input:checked){border-color:var(--acc)}
 .auto-ttl{font-size:15px;font-weight:700;color:var(--acc);display:flex;align-items:center;justify-content:space-between}
 .auto-close{background:none;border:none;color:var(--txt2);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:4px;line-height:1}
 .auto-close:hover{color:var(--txt);background:var(--bg3)}
@@ -2793,6 +2817,17 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
         O marcador "[NAO ENCONTRADO]" &eacute; opcional e &uacute;til ao reutilizar um resultado anterior;
         ele &eacute; sempre substitu&iacute;do pelos c&oacute;digos encontrados neste processamento.
       </span>
+    </div>
+    <div class="auto-base" role="radiogroup" aria-label="Valor de refer&ecirc;ncia">
+      <span class="cl">Valor de refer&ecirc;ncia</span>
+      <label class="auto-base-op" title="Usa o pre&ccedil;o de venda de cada produto (como sempre funcionou)">
+        <input type="radio" name="autoBase" id="autoBaseNormal" value="normal" onchange="_salvarPrefBaseAuto()" checked>
+        <span>Normal <small>(pre&ccedil;o de venda)</small></span>
+      </label>
+      <label class="auto-base-op" title="Usa o custo de compra de cada produto somado de 10% para chegar ao valor pedido">
+        <input type="radio" name="autoBase" id="autoBaseCusto" value="custo" onchange="_salvarPrefBaseAuto()">
+        <span>Custo de compra <small>(+10%)</small></span>
+      </label>
     </div>
     <div>
       <div class="cl" style="margin-bottom:4px">Lista de entrada</div>
@@ -5013,6 +5048,32 @@ function _restaurarPrefReaproveitar() {
     var chk = document.getElementById('chkReaproveitarPadrao');
     if (!chk) return;
     try { chk.checked = localStorage.getItem('est-reaproveitar-padrao') === '1'; } catch (_) {}
+    _restaurarPrefBaseAuto();
+}
+
+// ── Valor de referência do Modo Automático: "normal" (preço de venda) ou
+// "custo" (custo de compra + 10%). Preferência de UI, persistida no navegador.
+var MARGEM_CUSTO_AUTO = 0.10;
+function _baseAutoCusto() {
+    var r = document.getElementById('autoBaseCusto');
+    return !!(r && r.checked);
+}
+function _salvarPrefBaseAuto() {
+    try { localStorage.setItem('est-auto-base', _baseAutoCusto() ? 'custo' : 'normal'); } catch (_) {}
+}
+function _restaurarPrefBaseAuto() {
+    var custo = false;
+    try { custo = localStorage.getItem('est-auto-base') === 'custo'; } catch (_) {}
+    var rc = document.getElementById('autoBaseCusto');
+    var rn = document.getElementById('autoBaseNormal');
+    if (rc) rc.checked = custo;
+    if (rn) rn.checked = !custo;
+}
+// Custo de compra + 10%, em centavos exatos (null = item sem custo válido).
+function _valorCustoAuto(it) {
+    var c = Number(it && it.custo);
+    if (!isFinite(c) || c <= 0) return null;
+    return Math.round((c * (1 + MARGEM_CUSTO_AUTO) + Number.EPSILON) * 100) / 100;
 }
 
 // ── Modal de Lista Personalizada: abrir / fechar / salvar ─────────────────────
@@ -5394,6 +5455,18 @@ function _sincronizarEstoqueTempoReal(onPronto) {
     }).catch(function() { onPronto(false); }); // falha de rede de verdade — segue com o que já tinha, mas avisa que não é garantidamente fresco
 }
 
+// Rola a tela (e o modal) até o botão "Copiar resultado" do Modo Automático.
+// Depois do display:'' o navegador precisa de um quadro para calcular a posição.
+function _rolarAteCopiarAuto() {
+    var alvo = document.getElementById('autoCopyBtn');
+    if (!alvo || alvo.style.display === 'none') return;
+    var rolar = function() {
+        try { alvo.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' }); }
+        catch (_) { try { alvo.scrollIntoView(false); } catch (__) {} }
+    };
+    if (window.requestAnimationFrame) window.requestAnimationFrame(rolar); else setTimeout(rolar, 0);
+}
+
 function iniciarModoAuto(faixaExtraOverride, tentativaExtensaoOverride) {
     var inputEl  = document.getElementById('autoInput');
     var statusEl = document.getElementById('autoStatus');
@@ -5465,6 +5538,9 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
     var _limLabel = _faixaAutoAtual > 0 ? ' (faixa +R$' + (40 + _faixaAutoAtual) + ')' : '';
     statusEl.textContent = 'Processando' + _limLabel + '...';
     statusEl.className   = 'auto-status';
+
+    // ── Valor de referência: preço de venda (normal) ou custo de compra +10% ──
+    var modoCusto = _baseAutoCusto();
 
     // ── Lista personalizada: restringe o pool de busca e habilita repetição ────
     var chkLp = document.getElementById('chkListaPersonalizada');
@@ -5544,13 +5620,16 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
                 continue;
             }
 
-            if (_lpReal && typeof _lpReal.preco === 'number' && !isNaN(_lpReal.preco) && _lpReal.preco > 0 &&
-                typeof _lpReal.estoque === 'number' && !isNaN(_lpReal.estoque)) {
+            var _lpTemValor = _lpReal && (modoCusto
+                ? (typeof _lpReal.custo === 'number' && _lpReal.custo > 0)
+                : (typeof _lpReal.preco === 'number' && !isNaN(_lpReal.preco) && _lpReal.preco > 0));
+            if (_lpTemValor && typeof _lpReal.estoque === 'number' && !isNaN(_lpReal.estoque)) {
                 _itemLp = {
                     codigo:    _lpItem.codigo,
                     descricao: _lpReal.descricao || _lpItem.codigo,
                     estoque:   _lpReal.estoque,
-                    preco:     _lpReal.preco
+                    preco:     Number(_lpReal.preco) || 0,
+                    custo:     typeof _lpReal.custo === 'number' ? _lpReal.custo : null
                 };
             }
 
@@ -5572,7 +5651,7 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
                 }
             }
 
-            if (_itemLp && Number(_itemLp.preco || 0) > 0) {
+            if (_itemLp && (modoCusto ? _valorCustoAuto(_itemLp) !== null : Number(_itemLp.preco || 0) > 0)) {
                 var _chP = _chaveProduto(_itemLp.codigo);
                 if (_produtosNoPool[_chP]) continue; // mesmo produto já está no pool
                 _produtosNoPool[_chP] = true;
@@ -5590,7 +5669,9 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
         if (!poolPersonalizado.length) {
             statusEl.textContent = (_inativos.length && !_naoAchados.length)
                 ? 'Todos os c\u00f3digos da lista personalizada est\u00e3o INATIVOS no sistema.'
-                : 'Nenhum c\u00f3digo da lista personalizada foi encontrado no banco (ou sem pre\u00e7o v\u00e1lido).';
+                : (modoCusto
+                    ? 'Nenhum c\u00f3digo da lista personalizada tem custo de compra v\u00e1lido no banco.'
+                    : 'Nenhum c\u00f3digo da lista personalizada foi encontrado no banco (ou sem pre\u00e7o v\u00e1lido).');
             statusEl.className   = 'auto-status er';
             btn.disabled = false;
             return;
@@ -5636,11 +5717,44 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
             // estoque mínimo configurado e não está na lista de proibidos
             return !it.usado
                 && !_pendentes[it.codigo]
-                && Number(it.preco   || 0) > PRECO_SENTINEL_ZERADO
+                && (modoCusto ? _valorCustoAuto(it) !== null : Number(it.preco || 0) > PRECO_SENTINEL_ZERADO)
                 // Regra única do mínimo: depois do uso o estoque não fica abaixo dele.
                 && _qtdMaximaDisponivel(it, null, null, _S.estoqueMinimo) > 0
                 && !_ehProibidoCliente(it.descricao, _S.proibidosEmbutidos, _S.proibidosExtra);
         });
+    }
+
+    // Modo "Custo de compra": o valor de cada produto passa a ser o custo de
+    // compra + 10%. O pool recebe CÓPIAS com esse valor em "preco" — assim o
+    // motor (Agrupar/Combinar, estoque mínimo, lista personalizada,
+    // reaproveitamento) funciona igual, sem nenhuma mudança; o preço de venda
+    // original fica em "precoVenda". Itens sem custo de compra ficam de fora.
+    if (modoCusto) {
+        disponiveis = disponiveis.reduce(function(acc, it) {
+            var v = _valorCustoAuto(it);
+            if (v !== null) acc.push(Object.assign({}, it, { preco: v, precoVenda: it.preco, custoCompra: Number(it.custo) }));
+            return acc;
+        }, []);
+        if (!disponiveis.length) {
+            statusEl.textContent = 'Nenhum produto dispon\u00edvel tem custo de compra no banco \u2014 use o modo Normal.';
+            statusEl.className   = 'auto-status er';
+            btn.disabled = false;
+            return;
+        }
+    }
+    // Códigos da saída. No modo custo, cada código vem com o valor usado
+    // (custo de compra + 10%): "3*08395 (R$29,70) 00123 (R$178,90)".
+    function _codigosDaSaida(itens) {
+        if (!modoCusto) return _formatarCodigosCompactado(itens);
+        var contagem = {}, ordem = [];
+        itens.forEach(function(it) {
+            if (!contagem[it.codigo]) { contagem[it.codigo] = { qtd: 0, valor: Number(it.preco || 0) }; ordem.push(it.codigo); }
+            contagem[it.codigo].qtd++;
+        });
+        return ordem.map(function(cod) {
+            var c = contagem[cod];
+            return (c.qtd > 1 ? c.qtd + '*' : '') + cod + ' (R$' + c.valor.toFixed(2).replace('.', ',') + ')';
+        }).join(' ');
     }
 
     var usadosSession  = {};
@@ -5813,7 +5927,7 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
                 }
                 // Agrupa repetições do mesmo código no formato "3*codigo" em vez
                 // de listá-lo várias vezes seguidas
-                var codigos = _formatarCodigosCompactado(resultado.itens);
+                var codigos = _codigosDaSaida(resultado.itens);
                 saida.push(linha + TAB + codigos);
                 encontrados++;
             } else {
@@ -5880,9 +5994,12 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
         outputEl.value        = _saidaReordenadaParaExibicao().join(NL);
         resWrap.style.display = 'block';
         copyBtn.style.display = '';
+        // Leva a tela até o botão "Copiar resultado" assim que há resultado.
+        _rolarAteCopiarAuto();
 
         function _atualizarMsgFinal() {
             var msg = '\u2713 Processado: ' + encontrados + ' linha' + (encontrados === 1 ? '' : 's') + ' com c\u00f3digos';
+            if (modoCusto) msg += ' \u2014 base: custo de compra +10%';
             if (naoEncontrados > 0) msg += ', ' + naoEncontrados + ' n\u00e3o encontrado' + (naoEncontrados === 1 ? '' : 's');
             if (lpAtiva) {
                 msg += ' \u2014 lista personalizada (c\u00f3digos n\u00e3o marcados como usados)';
@@ -5925,7 +6042,7 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
             });
             return ordem.map(function(cod) {
                 var c = contagem[cod];
-                return c.qtd + 'x ' + cod + ' (R$' + c.preco.toFixed(2).replace('.', ',') + ' cada)';
+                return c.qtd + 'x ' + cod + ' (R$' + c.preco.toFixed(2).replace('.', ',') + (modoCusto ? ' cada, custo +10%)' : ' cada)');
             }).join(' + ');
         }
 
@@ -5981,7 +6098,7 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
                         resExc.itens.forEach(function(it) {
                             _usosLPPorCod[it.codigo] = (_usosLPPorCod[it.codigo] || 0) + 1;
                         });
-                        saida[pend.idx] = pend.linha + TAB + _formatarCodigosCompactado(resExc.itens);
+                        saida[pend.idx] = pend.linha + TAB + _codigosDaSaida(resExc.itens);
                         encontrados++;
                         naoEncontrados--;
                         outputEl.value = saida.join(NL);
@@ -6738,6 +6855,7 @@ function _itemParaCliente(item) {
         codbarras:   item.codbarras,
         estoque:     item.estoque,
         preco:       item.preco,
+        custo:       item.custo == null ? null : item.custo,
         ultimaVenda: item.ultimaVenda,
         usado:       !!_usados[item.codigo]
     };

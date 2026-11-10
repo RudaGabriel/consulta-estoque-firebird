@@ -2,11 +2,13 @@
 REM ===========================================================================
 REM  consulta-estoque.bat
 REM  @author Ruda Gabriel
-REM  @version 5.30.1
+REM  @version 5.31.0
 REM  @changelog
-REM    5.30.1 - 2026-11-05 - Mensagens do console revisadas para linguagem
-REM      formal ("Execute:" no lugar de "Rode:", "muito antigo", "permaneceu
-REM      aberta ou em execucao oculta" etc.). Sem mudanca de comportamento.
+REM    5.31.0 - 2026-11-10 - Nenhuma interacao com a janela: verificacao com
+REM      falha segue sozinha em 5 s; servidor antigo na mesma porta e encerrado
+REM      e substituido sem perguntar; servidor que cai reinicia sozinho (ate 5
+REM      vezes seguidas); erros fatais mostram a mensagem e a janela fecha
+REM      sozinha em 60 s (sem "pressione uma tecla").
 REM
 REM  Mantenha este arquivo com quebras de linha CRLF ("call :rotina" falha com LF).
 REM ===========================================================================
@@ -41,7 +43,7 @@ if errorlevel 1 (
     echo  Baixe e instale manualmente em: https://nodejs.org
     echo  Log da instalacao: %TEMP%\consulta_estoque_node_install.log
     echo.
-    pause
+    call :fechar_em 60
     exit /b 1
 )
 
@@ -64,7 +66,7 @@ if not exist "consulta-estoque.js" (
     echo  [ERRO] consulta-estoque.js nao encontrado.
     echo  Certifique-se de que o .bat esta na mesma pasta que os .js
     echo.
-    pause
+    call :fechar_em 60
     exit /b 1
 )
 
@@ -116,7 +118,7 @@ echo  [ERRO] Falha ao instalar node-firebird.
 echo  Possiveis causas: sem internet, proxy nao configurado ou sem permissao
 echo  de escrita nesta pasta. Execute manualmente: npm install node-firebird
 echo.
-pause
+call :fechar_em 60
 exit /b 1
 
 :firebird_instalado
@@ -172,13 +174,8 @@ if defined VERIFICACAO_FALHOU (
     echo   pode nao funcionar corretamente.
     echo  ================================================
     echo.
-    choice /c SN /n /m "  Iniciar mesmo assim? [S/N]: "
-    if errorlevel 2 (
-        echo.
-        echo  Cancelado pelo usuario.
-        pause
-        exit /b 1
-    )
+    echo   Iniciando mesmo assim em 5 segundos...
+    timeout /t 5 /nobreak > nul
     echo.
 ) else (
     echo  [OK] Verificacoes de integridade concluidas.
@@ -190,6 +187,9 @@ REM Porta ocupada? (ex.: servidor antigo esquecido rodando)
 REM ---------------------------------------------------------------------------
 REM findstr com dois /c: = "OU": cobre Windows em ingles (LISTENING) e em
 REM portugues (OUVINDO). O ":" antes e o espaco depois evitam casar 17888/78880.
+REM Contador de reinicios automaticos (definido antes de qualquer "goto
+REM :iniciar_servidor", senao o navegador nao abriria na primeira vez).
+set "REINICIOS=0"
 set "PORTA_PID="
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr /r /c:":%PORTA% .*LISTENING" /c:":%PORTA% .*OUVINDO"') do set "PORTA_PID=%%p"
 if not defined PORTA_PID goto :iniciar_servidor
@@ -199,10 +199,7 @@ if errorlevel 1 goto :porta_ocupada_outro
 
 echo  [AVISO] Ja existe um servidor Node em execucao na porta %PORTA% ^(PID %PORTA_PID%^).
 echo          Provavelmente uma janela anterior permaneceu aberta ou em execucao oculta.
-echo.
-choice /c SN /n /m "  Encerrar o servidor antigo e iniciar um novo? [S/N]: "
-if errorlevel 2 goto :cancelar_porta
-echo  Encerrando o servidor antigo ^(gravando dados pendentes^)...
+echo  Encerrando o servidor antigo automaticamente ^(gravando dados pendentes^)...
 call :parar_servidor %PORTA_PID%
 echo.
 goto :iniciar_servidor
@@ -211,14 +208,8 @@ goto :iniciar_servidor
 echo  [ERRO] A porta %PORTA% esta ocupada por outro programa ^(PID %PORTA_PID%^).
 echo         Feche esse programa ou defina outra "portaEstoque" no config.json.
 echo.
-pause
+call :fechar_em 60
 exit /b 1
-
-:cancelar_porta
-echo.
-echo  Cancelado pelo usuario.
-pause
-exit /b 0
 
 REM ---------------------------------------------------------------------------
 REM Iniciar servidor (visivel nesta janela) e aguardar a tecla 0
@@ -254,9 +245,13 @@ tasklist /fi "PID eq %SERVER_PID%" /fo csv /nh 2>nul | find /i "node.exe" > nul
 if errorlevel 1 goto :servidor_caiu
 
 REM Abre o navegador direto daqui: "start" com URL nao abre janela de cmd.
-start "" "http://localhost:%PORTA%"
+REM So na primeira vez: num reinicio automatico a aba ja aberta reconecta sozinha.
+if "%REINICIOS%"=="0" start "" "http://localhost:%PORTA%"
+set "VOLTAS=0"
 
 :loop_menu
+set /a "VOLTAS+=1"
+if %VOLTAS% GEQ 20 set "REINICIOS=0"
 REM Espera a tecla 0 por 3s; sem tecla, assume N e apenas verifica o servidor.
 REM (Ctrl+C retorna errorlevel 0 e tambem cai no encerramento, sem deixar o
 REM servidor orfao.) "if errorlevel 2" e avaliado em tempo de execucao.
@@ -273,16 +268,39 @@ goto :loop_menu
 echo.
 echo  [ERRO] Nao foi possivel iniciar o servidor.
 echo.
-pause
+call :fechar_em 60
 exit /b 1
 
+REM Servidor caiu: reinicia sozinho (ate 5 vezes seguidas, 5 s entre elas). A
+REM contagem zera quando o servidor fica de pe por ~1 minuto (20 voltas de 3 s).
 :servidor_caiu
 del "%ESTOQUE_PIDFILE%" > nul 2>&1
+REM Outra janela do Consulta Estoque assumiu a porta (o .bat foi aberto de novo
+REM e substituiu este servidor): esta janela so avisa e fecha, sem disputar.
+set "OUTRO_PID="
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr /r /c:":%PORTA% .*LISTENING" /c:":%PORTA% .*OUVINDO"') do set "OUTRO_PID=%%p"
+if defined OUTRO_PID (
+    tasklist /fi "PID eq %OUTRO_PID%" /fo csv /nh 2>nul | find /i "node.exe" > nul
+    if not errorlevel 1 (
+        echo.
+        echo  Outra janela do Consulta Estoque assumiu o servidor na porta %PORTA%.
+        call :fechar_em 10
+        exit /b 0
+    )
+)
 echo.
 echo  [ERRO] O servidor foi encerrado. Veja as mensagens acima.
+set /a "REINICIOS+=1"
+if %REINICIOS% GTR 5 (
+    echo  O servidor caiu 5 vezes seguidas. Verifique as mensagens acima.
+    echo.
+    call :fechar_em 60
+    exit /b 1
+)
+echo  Reiniciando automaticamente em 5 segundos ^(tentativa %REINICIOS% de 5^)...
 echo.
-pause
-exit /b 1
+timeout /t 5 /nobreak > nul
+goto :iniciar_servidor
 
 :encerrar_servidor
 echo.
@@ -301,6 +319,15 @@ REM  2) Espera ate ~8s o processo sumir.
 REM  3) So entao usa taskkill /f. Resposta diferente de 200 (servidor antigo,
 REM     sem a rota) ou sem resposta vai direto ao taskkill, sem esperar.
 REM ===========================================================================
+REM ===========================================================================
+REM  SUBROTINA: fechar_em <segundos>
+REM  Mantem a mensagem na tela e fecha sozinha (qualquer tecla fecha antes).
+REM ===========================================================================
+:fechar_em
+echo  Esta janela fecha sozinha em %~1 segundos.
+timeout /t %~1 > nul
+exit /b 0
+
 :parar_servidor
 set "PARAR_PID=%~1"
 if not defined PARAR_PID exit /b 0
@@ -337,7 +364,7 @@ if not "%PS_RC%"=="0" (
     echo  [ERRO] A instalacao do Node.js falhou. Veja o log em:
     echo         %TEMP%\consulta_estoque_node_install.log
     echo.
-    pause
+    call :fechar_em 60
 )
 exit /b %PS_RC%
 
