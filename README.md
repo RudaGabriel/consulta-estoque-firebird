@@ -77,7 +77,16 @@ Para cada linha, o sistema:
 2. Procura **a combinação de itens que mais se aproxima do valor**: primeiro o valor exato, depois dentro da tolerância de + R$ 40.
 3. **Desconta o que já foi usado nas linhas anteriores** da mesma lista, para não sugerir mais unidades do que existem.
 4. Se não achar nada, pode **ampliar a faixa** de tolerância e **buscar mais itens no catálogo completo** do banco (até 5 rodadas de 1.000 itens).
-5. Escreve o resultado ao lado de cada linha (`[NAO ENCONTRADO]` é substituído pelos códigos encontrados) para você **copiar**. Depois de copiar, os códigos podem ser marcados como usados.
+5. Escreve o resultado ao lado de cada linha (`[NAO ENCONTRADO]` é substituído pelos códigos encontrados) e **leva a tela até o botão "Copiar resultado"**. Depois de copiar, os códigos podem ser marcados como usados.
+
+**Valor de referência** (escolha no topo do Modo Automático; fica guardada no navegador):
+
+| Opção | O que soma para chegar ao valor pedido |
+|---|---|
+| **Normal** (padrão) | O **preço de venda** de cada produto, como sempre funcionou. |
+| **Custo de compra** | O **custo de compra + 10%** de cada produto. Junta vários produtos (e repete o mesmo, se o estoque permitir) até chegar ao valor exato ou o mais perto possível. Cada código sai com o valor usado: `268,00 DEBITO → 10014 (R$149,05) 10011 (R$99,00) 10002 (R$20,02)`. Produtos sem custo de compra no banco ficam de fora. |
+
+O custo de compra é lido da coluna `CUSTOCOMPR` do Small Commerce (ou equivalente: `CUSTO_COMPRA`, `PRECO_CUSTO`, `CUSTOMEDIO`...). O log mostra qual coluna foi usada em `Colunas: ... CUSTO=...`.
 
 Opções:
 
@@ -132,9 +141,12 @@ Opções:
    - instala o Node.js, se necessário (pede permissão de administrador);
    - instala o `node-firebird`, tentando primeiro o cache local e depois a internet;
    - lê a porta do `config.json` (padrão **7888**);
-   - roda as verificações de integridade e os testes, e pergunta antes de continuar se algo falhar;
-   - se já houver um servidor antigo na porta, oferece encerrá-lo sem perder dados;
-   - inicia o servidor e **abre o navegador** em `http://localhost:7888`.
+   - roda as verificações de integridade e os testes; se algo falhar, avisa e segue sozinho em 5 segundos;
+   - se já houver um servidor antigo na porta, encerra-o sozinho sem perder dados;
+   - inicia o servidor e **abre o navegador** em `http://localhost:7888`;
+   - se o servidor cair, **reinicia sozinho** (até 5 vezes seguidas).
+
+   **Não é preciso apertar nada na janela.** Em erro grave (Node.js ausente, porta ocupada por outro programa), a mensagem fica na tela e a janela fecha sozinha em 60 segundos.
 3. Nos outros PCs da rede, acesse `http://IP-DO-SERVIDOR:7888`.
 4. Para encerrar, pressione **0** na janela do `.bat`. Os dados pendentes são gravados antes de sair. **Ctrl+C** e fechar a janela também gravam antes de sair.
 

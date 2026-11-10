@@ -5,10 +5,11 @@
  *
  * @author Ruda Gabriel
  *
- * @version 2.12.0
+ * @version 2.13.0
  * @changelog
- *   2.12.0 - 2026-11-10 - Removidos os testes do painel do executável
- *     (executavel/consola.js), que saiu do projeto junto com o .exe.
+ *   2.13.0 - 2026-11-10 - Testes do custo de compra (5.54): coluna CUSTOCOMPR
+ *     detectada, CUSTO nas duas consultas (NULL sem a coluna), custo
+ *     arredondado no item e na lista personalizada. 136 testes.
  *
  * EXECUÇÃO:
  *   node --test consulta-estoque_test.js
@@ -1196,5 +1197,44 @@ describe("descoberta 5.52: rede primeiro e só SMALL.FDB", () => {
         assert.equal(await srvMod._comPrazo(new Promise(() => {}), 50, "padrao"), "padrao");
         assert.equal(await srvMod._comPrazo(Promise.resolve(1), 50, 0), 1);
         assert.equal(await srvMod._comPrazo(Promise.reject(new Error("x")), 50, "erro"), "erro");
+    });
+});
+
+describe("5.54: custo de compra para o Modo Automático", () => {
+    const srv = require("./consulta-estoque.js");
+
+    test("_mapearColunas acha o custo de compra (CUSTOCOMPR do Small Commerce)", () => {
+        const cols = srv._mapearColunas(new Set(["CODIGO", "DESCRICAO", "QTD_ATUAL", "PRECO", "CUSTOCOMPR", "CUSTOMEDIO"]));
+        assert.equal(cols.cst, "CUSTOCOMPR", "CUSTOCOMPR tem prioridade sobre o custo médio");
+        assert.equal(srv._mapearColunas(new Set(["CODIGO", "DESCRICAO", "QTD_ATUAL"])).cst, null);
+    });
+
+    test("SQL principal e da lista personalizada trazem CUSTO (NULL quando o banco não tem a coluna)", () => {
+        const com = srv._mapearColunas(new Set(["CODIGO", "DESCRICAO", "QTD_ATUAL", "PRECO", "CUSTOCOMPR"]));
+        assert.match(srv._montarSqlPrincipal("ESTOQUE", com), /CAST\(p\.CUSTOCOMPR AS DOUBLE PRECISION\) AS CUSTO/);
+        assert.match(srv._montarSqlListaPersonalizada("ESTOQUE", com, 2), /CAST\(p\.CUSTOCOMPR AS DOUBLE PRECISION\) AS CUSTO/);
+        const sem = srv._mapearColunas(new Set(["CODIGO", "DESCRICAO", "QTD_ATUAL", "PRECO"]));
+        assert.match(srv._montarSqlPrincipal("ESTOQUE", sem), /CAST\(NULL AS DOUBLE PRECISION\) AS CUSTO/);
+    });
+
+    test("_processarLinhasPrincipais: custo arredondado em centavos; vazio vira null", () => {
+        const r = srv._processarLinhasPrincipais([
+            { CODIGO: "1", DESCRICAO: "ITEM A", ESTOQUE: 10, PRECO: 20, CUSTO: 12.3456 },
+            { CODIGO: "2", DESCRICAO: "ITEM B", ESTOQUE: 10, PRECO: 20, CUSTO: null },
+            { CODIGO: "3", DESCRICAO: "ITEM C", ESTOQUE: 10, PRECO: 20 }
+        ], 5, 100);
+        const porCod = Object.fromEntries(r.itens.map(i => [i.codigo, i]));
+        assert.equal(porCod["1"].custo, 12.35);
+        assert.equal(porCod["2"].custo, null);
+        assert.equal(porCod["3"].custo, null);
+    });
+
+    test("_reconciliarListaPersonalizada guarda o custo de cada código", () => {
+        const mapa = srv._reconciliarListaPersonalizada(
+            [{ codigo: "00703" }, { codigo: "9" }],
+            [{ CODIGO: "703", DESCRICAO: "X", ESTOQUE: 4, PRECO: 10, CUSTO: 6.5, ATIVO: null },
+             { CODIGO: "9", DESCRICAO: "Y", ESTOQUE: 4, PRECO: 10, CUSTO: null, ATIVO: null }], false);
+        assert.equal(mapa["00703"].custo, 6.5);
+        assert.equal(mapa["9"].custo, null);
     });
 });
