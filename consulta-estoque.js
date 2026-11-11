@@ -5,20 +5,14 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.56.0
+ * @version 5.57.0
  * @changelog
- *   5.56.0 - 2026-11-11 - Modo Automático, modo custo: novo aviso de
- *     "Custo de compra maior que o preço de venda":
- *     - Mostra custo, valor usado (+10%), preço atual, diferença e margem.
- *     - Deixar de fora: "Só nesta consulta", "Hoje" ou "Até o preço ser
- *       corrigido" (recomendado; volta sozinho quando o preço for acertado,
- *       no lugar do antigo "daqui em diante").
- *     - Usar mesmo assim: "Só nesta consulta" ou "Sempre" (até o custo ou o
- *       preço mudar; aí volta a avisar).
- *     - Caixa "Fazer o mesmo com os outros produtos" nesta situação.
- *     - Área "Decisões guardadas" com "Desfazer" por produto e "Desfazer
- *       todas" (substitui o "Restaurar"); decisões da 5.55.0 são migradas.
- *     - O aviso não fecha clicando fora: a escolha é obrigatória.
+ *   5.57.0 - 2026-11-11 - Modo custo: nomes formais no aviso de custo
+ *     superior ao preço de venda — "Excluir o produto da composição"
+ *     (Somente nesta consulta / Até o fim do dia / Até a correção do preço),
+ *     "Manter o produto na composição" (Somente nesta consulta / Até
+ *     alteração de custo ou preço), "Aplicar a mesma decisão aos demais
+ *     produtos" e área "Decisões registradas" com "Revogar"/"Revogar todas".
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
@@ -2854,7 +2848,7 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
     <div id="autoDecisoesCusto" class="cst-guardadas" style="display:none">
       <span id="autoDecisoesTxt"></span>
       <button class="btn btn-s btn-sm" type="button" id="autoDecisoesVer" onclick="_alternarListaDecisoesCusto()">Ver</button>
-      <button class="btn btn-s btn-sm" type="button" onclick="_desfazerTodasDecisoesCusto()">Desfazer todas</button>
+      <button class="btn btn-s btn-sm" type="button" onclick="_desfazerTodasDecisoesCusto()">Revogar todas</button>
       <div id="autoDecisoesLista" class="cst-lista" style="display:none"></div>
     </div>
     <div>
@@ -5191,22 +5185,22 @@ function _guardarDecisaoCusto(it, acao, escopo) {
     _atualizarInfoDecisoesCusto();
 }
 function _textoDecisaoCusto(d) {
-    if (d.acao === 'usar') return 'usado mesmo com custo acima (até o custo ou o preço mudar)';
-    if (d.ate === 'corrigir') return 'fora até o preço ser corrigido';
-    return 'fora até o fim do dia';
+    if (d.acao === 'usar') return 'mantido até alteração de custo ou preço';
+    if (d.ate === 'corrigir') return 'excluído até a correção do preço';
+    return 'excluído até o fim do dia';
 }
 function _desfazerDecisaoCusto(cod) {
     var mapa = _lerDecisoesCusto();
     delete mapa[cod];
     _salvarDecisoesCusto(mapa);
     _atualizarInfoDecisoesCusto();
-    toast('Decisão desfeita: o produto ' + cod + ' volta a ser perguntado.', 3000);
+    toast('Decisão revogada: o produto ' + cod + ' volta a gerar aviso.', 3000);
 }
 function _desfazerTodasDecisoesCusto() {
     try { localStorage.removeItem(_CHAVE_DECISOES_CUSTO); } catch (_) {}
     try { localStorage.removeItem(_CHAVE_IGNORADOS_CUSTO_ANTIGA); } catch (_) {}
     _atualizarInfoDecisoesCusto();
-    toast('Todas as decisões do modo custo foram desfeitas.', 3000);
+    toast('Todas as decisões registradas do modo custo foram revogadas.', 3000);
 }
 function _alternarListaDecisoesCusto() {
     var lista = document.getElementById('autoDecisoesLista');
@@ -5225,9 +5219,9 @@ function _atualizarInfoDecisoesCusto() {
     var fora = cods.filter(function(c) { return mapa[c].acao === 'ignorar'; }).length;
     var usa = cods.length - fora;
     var txt = document.getElementById('autoDecisoesTxt');
-    if (txt) txt.textContent = 'Decisões guardadas do modo custo: ' +
-        fora + ' produto' + (fora === 1 ? '' : 's') + ' de fora, ' +
-        usa + ' liberado' + (usa === 1 ? '' : 's') + ' mesmo com custo acima do preço.';
+    if (txt) txt.textContent = 'Decisões registradas (custo superior ao preço): ' +
+        fora + ' produto' + (fora === 1 ? '' : 's') + ' excluído' + (fora === 1 ? '' : 's') + ', ' +
+        usa + ' mantido' + (usa === 1 ? '' : 's') + '.';
     var lista = document.getElementById('autoDecisoesLista');
     if (lista) {
         lista.innerHTML = '';
@@ -5237,7 +5231,7 @@ function _atualizarInfoDecisoesCusto() {
             var sp = document.createElement('span');
             sp.textContent = cod + (d.desc ? ' — ' + d.desc : '') + ' · ' + _textoDecisaoCusto(d);
             var b = document.createElement('button');
-            b.className = 'btn btn-s btn-sm'; b.type = 'button'; b.textContent = 'Desfazer';
+            b.className = 'btn btn-s btn-sm'; b.type = 'button'; b.textContent = 'Revogar';
             b.addEventListener('click', function() { _desfazerDecisaoCusto(cod); });
             linha.appendChild(sp); linha.appendChild(b);
             lista.appendChild(linha);
@@ -5263,7 +5257,7 @@ function _modalCustoAcimaPreco(it, qtdOutros, depois) {
     var bx = document.createElement('div'); bx.className = 'modal-bx cst-bx';
     bx.setAttribute('role', 'dialog'); bx.setAttribute('aria-modal', 'true');
     var ttl = document.createElement('div'); ttl.className = 'modal-ttl';
-    ttl.textContent = '⚠ Custo de compra maior que o preço de venda';
+    ttl.textContent = '⚠ Custo de compra superior ao preço de venda';
     var prod = document.createElement('div'); prod.className = 'cst-prod';
     prod.textContent = it.codigo + (it.descricao ? ' — ' + it.descricao : '');
 
@@ -5308,21 +5302,21 @@ function _modalCustoAcimaPreco(it, qtdOutros, depois) {
         g.appendChild(t); g.appendChild(st); g.appendChild(bs);
         return g;
     }
-    var bRecomendado = botao('Até o preço ser corrigido',
+    var bRecomendado = botao('Até a correção do preço',
         'Fica de fora até o preço (ou o custo) ser corrigido no Small Commerce; depois volta sozinho.',
         'btn btn-p btn-sm', 'ignorar', 'corrigir');
-    var gIgnorar = grupo('Deixar o produto de fora (recomendado)',
-        'A linha é refeita sem ele. “Até o preço ser corrigido” volta sozinho quando o preço for acertado.',
+    var gIgnorar = grupo('Excluir o produto da composição (recomendado)',
+        'A linha é recalculada sem este produto. Em “Até a correção do preço”, ele é reincluído automaticamente quando o preço for corrigido.',
         [
-            botao('Só nesta consulta', 'Fica de fora só neste processamento.', null, 'ignorar', 'consulta'),
-            botao('Hoje', 'Fica de fora até o fim do dia.', null, 'ignorar', 'hoje'),
+            botao('Somente nesta consulta', 'Excluído apenas neste processamento.', null, 'ignorar', 'consulta'),
+            botao('Até o fim do dia', 'Excluído até as 23h59 de hoje.', null, 'ignorar', 'hoje'),
             bRecomendado
         ]);
-    var gUsar = grupo('Usar o produto mesmo assim',
-        'Entra com o valor do custo +10% (' + r$(it.preco) + ').',
+    var gUsar = grupo('Manter o produto na composição',
+        'O produto entra pelo custo de compra + 10% (' + r$(it.preco) + ').',
         [
-            botao('Só nesta consulta', 'Usa agora e pergunta de novo na próxima consulta.', null, 'usar', 'consulta'),
-            botao('Sempre', 'Não pergunta mais enquanto o custo e o preço forem os mesmos (se mudarem, volta a avisar).', null, 'usar', 'sempre')
+            botao('Somente nesta consulta', 'Mantido apenas neste processamento; o aviso volta na próxima consulta.', null, 'usar', 'consulta'),
+            botao('Até alteração de custo ou preço', 'Mantido sem novo aviso enquanto o custo e o preço não mudarem; se mudarem, o aviso volta.', null, 'usar', 'sempre')
         ]);
 
     var chk = null;
@@ -5332,8 +5326,8 @@ function _modalCustoAcimaPreco(it, qtdOutros, depois) {
         var lbl = document.createElement('label'); lbl.className = 'cst-todos';
         chk = document.createElement('input'); chk.type = 'checkbox';
         var sp = document.createElement('span');
-        sp.textContent = 'Fazer o mesmo com ' + (qtdOutros === 1 ? 'o outro produto' : 'os outros ' + qtdOutros + ' produtos') +
-            ' com custo acima do preço nesta consulta';
+        sp.textContent = 'Aplicar a mesma decisão ' + (qtdOutros === 1 ? 'ao outro produto' : 'aos demais ' + qtdOutros + ' produtos') +
+            ' com custo superior ao preço nesta consulta';
         lbl.appendChild(chk); lbl.appendChild(sp);
         bx.appendChild(lbl);
     }
@@ -6088,7 +6082,7 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
             if (dec.todos) outros.forEach(function(x) { _aplicarDecisaoCusto(x, dec); });
             if (dec.escopo !== 'consulta') {
                 var n = 1 + (dec.todos ? outros.length : 0);
-                toast('Decisão guardada para ' + n + ' produto' + (n === 1 ? '' : 's') + ' (pode desfazer em “Decisões guardadas”).', 3500);
+                toast('Decisão guardada para ' + n + ' produto' + (n === 1 ? '' : 's') + ' (pode revogar em “Decisões registradas”).', 3500);
             }
             depois();
         });

@@ -9,7 +9,7 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.56.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.57.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.31.0**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.13.0**.
@@ -24,6 +24,20 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.57.0 (2026-11-11)
+
+```text
+Modo custo — nomes formais no aviso "Custo de compra superior ao preço de
+venda":
+  - Excluir o produto da composição: Somente nesta consulta, Até o fim do
+    dia, Até a correção do preço (recomendado).
+  - Manter o produto na composição: Somente nesta consulta, Até alteração
+    de custo ou preço.
+  - "Aplicar a mesma decisão aos demais produtos" nesta condição.
+  - Área "Decisões registradas", com "Revogar" por produto e "Revogar
+    todas".
+```
 
 ### 5.56.0 (2026-11-11)
 
