@@ -9,7 +9,7 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.55.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.56.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.31.0**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.13.0**.
@@ -24,6 +24,25 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.56.0 (2026-11-11)
+
+```text
+Modo Automático, modo custo — novo aviso "Custo de compra maior que o preço
+de venda":
+  - Mostra custo de compra, valor usado (+10%), preço atual, diferença em R$
+    e margem atual.
+  - Deixar o produto de fora: Só nesta consulta, Hoje ou Até o preço ser
+    corrigido (recomendado: volta sozinho quando o preço for acertado no
+    Small Commerce; substitui o antigo "daqui em diante").
+  - Usar o produto mesmo assim: Só nesta consulta ou Sempre (não pergunta
+    mais enquanto custo e preço forem os mesmos; se mudarem, volta a avisar).
+  - Caixa "Fazer o mesmo com os outros produtos" na mesma situação.
+  - Área "Decisões guardadas" no Modo Automático, com "Desfazer" por produto
+    e "Desfazer todas" (substitui o botão "Restaurar"). As decisões da
+    5.55.0 são migradas sozinhas.
+  - O aviso não fecha clicando fora: a escolha é obrigatória.
+```
 
 ### 5.55.0 (2026-11-11)
 

@@ -86,7 +86,13 @@ Para cada linha, o sistema:
 | **Normal** (padrão) | O **preço de venda** de cada produto, como sempre funcionou. |
 | **Custo de compra** | O **custo de compra + 10%** de cada produto. Junta vários produtos (e repete o mesmo, se o estoque permitir) até chegar ao **valor exato ou acima** — nunca abaixo. Até **R$ 3,00 acima** é aceito sozinho; mais que isso, o sistema **pergunta** se quer usar a combinação ou deixar a linha como não encontrada. Cada código sai com o valor usado: `268,00 DEBITO → 10014(R$149,05) 10011(R$99,00) 10002(R$20,02)`. Produtos sem custo de compra no banco ficam de fora. |
 
-**Custo de compra maior que o preço atual:** no modo custo, se um produto escolhido tem o custo de compra maior que o preço de venda, o sistema avisa (custo, custo + 10%, preço atual e a diferença em R$ e %) e pergunta: **Prosseguir com o item**, **Ignorar só nesta consulta**, **Ignorar hoje** ou **Ignorar daqui em diante**. Os itens ignorados aparecem no Modo Automático com o botão **Restaurar**.
+**Custo de compra maior que o preço atual:** no modo custo, se um produto escolhido tem o custo de compra maior que o preço de venda, aparece um aviso com o custo, o valor usado (+10%), o preço atual, a diferença e a margem. Você escolhe:
+
+- **Deixar o produto de fora** — *Só nesta consulta*, *Hoje* ou *Até o preço ser corrigido* (recomendado: o produto volta sozinho quando o preço for acertado no Small Commerce).
+- **Usar o produto mesmo assim** — *Só nesta consulta* ou *Sempre* (não pergunta mais enquanto custo e preço forem os mesmos; se mudarem, volta a avisar).
+- Marque **"Fazer o mesmo com os outros produtos"** para aplicar a mesma escolha a todos os produtos nessa situação de uma vez.
+
+As escolhas guardadas aparecem no Modo Automático em **Decisões guardadas** (botão **Ver**), com **Desfazer** em cada produto ou **Desfazer todas**.
 
 O custo de compra é lido da coluna `CUSTOCOMPR` do Small Commerce (ou equivalente: `CUSTO_COMPRA`, `PRECO_CUSTO`, `CUSTOMEDIO`...). O log mostra qual coluna foi usada em `Colunas: ... CUSTO=...`.
 
