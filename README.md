@@ -84,7 +84,9 @@ Para cada linha, o sistema:
 | Opção | O que soma para chegar ao valor pedido |
 |---|---|
 | **Normal** (padrão) | O **preço de venda** de cada produto, como sempre funcionou. |
-| **Custo de compra** | O **custo de compra + 10%** de cada produto. Junta vários produtos (e repete o mesmo, se o estoque permitir) até chegar ao valor exato ou o mais perto possível. Cada código sai com o valor usado: `268,00 DEBITO → 10014 (R$149,05) 10011 (R$99,00) 10002 (R$20,02)`. Produtos sem custo de compra no banco ficam de fora. |
+| **Custo de compra** | O **custo de compra + 10%** de cada produto. Junta vários produtos (e repete o mesmo, se o estoque permitir) até chegar ao **valor exato ou acima** — nunca abaixo. Até **R$ 3,00 acima** é aceito sozinho; mais que isso, o sistema **pergunta** se quer usar a combinação ou deixar a linha como não encontrada. Cada código sai com o valor usado: `268,00 DEBITO → 10014(R$149,05) 10011(R$99,00) 10002(R$20,02)`. Produtos sem custo de compra no banco ficam de fora. |
+
+**Custo de compra maior que o preço atual:** no modo custo, se um produto escolhido tem o custo de compra maior que o preço de venda, o sistema avisa (custo, custo + 10%, preço atual e a diferença em R$ e %) e pergunta: **Prosseguir com o item**, **Ignorar só nesta consulta**, **Ignorar hoje** ou **Ignorar daqui em diante**. Os itens ignorados aparecem no Modo Automático com o botão **Restaurar**.
 
 O custo de compra é lido da coluna `CUSTOCOMPR` do Small Commerce (ou equivalente: `CUSTO_COMPRA`, `PRECO_CUSTO`, `CUSTOMEDIO`...). O log mostra qual coluna foi usada em `Colunas: ... CUSTO=...`.
 
