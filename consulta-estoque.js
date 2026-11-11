@@ -5,19 +5,21 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.55.0
+ * @version 5.56.0
  * @changelog
- *   5.55.0 - 2026-11-11 - Modo Automático, valor de referência "Custo de compra":
- *     - A soma nunca fica abaixo do valor pedido; até +R$3,00 de sobra é
- *       aceita sozinha; acima disso pede confirmação ("Usar combinação" ou
- *       "Deixar como não encontrado").
- *     - Produto com custo de compra MAIOR que o preço atual de venda: avisa
- *       com custo, custo +10%, preço atual e a diferença (R$ e %), e pergunta:
- *       "Prosseguir com o item", "Ignorar só nesta consulta", "Ignorar hoje"
- *       ou "Ignorar daqui em diante". Os ignorados ficam guardados no
- *       navegador e aparecem no Modo Automático com o botão "Restaurar".
- *     - Saída sem espaço antes do valor: "10014(R$149,05) 10011(R$99,00)".
- *     - Modal de confirmação aceita botões extras; rodapé quebra linha.
+ *   5.56.0 - 2026-11-11 - Modo Automático, modo custo: novo aviso de
+ *     "Custo de compra maior que o preço de venda":
+ *     - Mostra custo, valor usado (+10%), preço atual, diferença e margem.
+ *     - Deixar de fora: "Só nesta consulta", "Hoje" ou "Até o preço ser
+ *       corrigido" (recomendado; volta sozinho quando o preço for acertado,
+ *       no lugar do antigo "daqui em diante").
+ *     - Usar mesmo assim: "Só nesta consulta" ou "Sempre" (até o custo ou o
+ *       preço mudar; aí volta a avisar).
+ *     - Caixa "Fazer o mesmo com os outros produtos" nesta situação.
+ *     - Área "Decisões guardadas" com "Desfazer" por produto e "Desfazer
+ *       todas" (substitui o "Restaurar"); decisões da 5.55.0 são migradas.
+ *     - O aviso não fecha clicando fora: a escolha é obrigatória.
+ * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
  * NÃO depende de gerar-relatorio-html.js nem servidor-relatorio.js.
@@ -2356,6 +2358,27 @@ td{padding:7px 12px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis
   flex-shrink:0;max-height:220px;overflow-y:auto;
   background:var(--bg3);border:1px solid var(--brd);border-radius:6px;padding:8px 10px}
 .modal-ftr{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;flex-shrink:0}
+/* Modo custo: aviso de custo de compra maior que o preço de venda */
+.modal-bx.cst-bx{max-width:460px}
+.cst-prod{font-size:13px;color:var(--txt);font-weight:600;margin-bottom:10px;word-break:break-word}
+.cst-grid{display:grid;grid-template-columns:1fr auto;gap:4px 14px;font-size:12.5px;color:var(--txt2);
+  background:var(--bg3);border:1px solid var(--brd);border-radius:6px;padding:8px 12px;margin-bottom:8px}
+.cst-grid b{color:var(--txt);text-align:right;font-variant-numeric:tabular-nums}
+.cst-grid .cst-neg{color:var(--red)}
+.cst-dica{font-size:11.5px;color:var(--txt2);line-height:1.5;margin-bottom:12px}
+.cst-grupo{border:1px solid var(--brd);border-radius:8px;padding:8px 10px 10px;margin-bottom:10px}
+.cst-grupo-ttl{font-size:12px;font-weight:700;color:var(--txt);margin-bottom:2px}
+.cst-grupo-sub{font-size:11px;color:var(--txt2);margin-bottom:8px;line-height:1.4}
+.cst-btns{display:flex;flex-wrap:wrap;gap:6px}
+.cst-btns .btn{flex:1 1 120px}
+.cst-todos{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--txt);margin:0 0 10px;cursor:pointer;line-height:1.4}
+.cst-todos input{margin-top:2px;flex-shrink:0}
+.cst-guardadas{font-size:11.5px;color:var(--txt2);line-height:1.6}
+.cst-guardadas .btn{margin-left:6px;padding:2px 8px}
+.cst-lista{margin-top:6px;max-height:160px;overflow-y:auto;background:var(--bg3);border:1px solid var(--brd);border-radius:6px;padding:4px 8px}
+.cst-lista-it{display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid var(--brd)}
+.cst-lista-it:last-child{border-bottom:0}
+.cst-lista-it span{flex:1;min-width:0;word-break:break-word}
 
 /* ─ SCROLLBAR FINA ─────────────────────────────────────────────────────── */
 ::-webkit-scrollbar{width:5px;height:5px}
@@ -2828,9 +2851,11 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
         <span>Custo de compra <small>(+10%)</small></span>
       </label>
     </div>
-    <div id="autoIgnoradosInfo" style="display:none;font-size:11.5px;color:var(--txt3)">
-      <span id="autoIgnoradosTxt"></span>
-      <button class="btn btn-s btn-sm" type="button" onclick="_restaurarIgnoradosCusto()" style="margin-left:6px;padding:2px 8px">Restaurar</button>
+    <div id="autoDecisoesCusto" class="cst-guardadas" style="display:none">
+      <span id="autoDecisoesTxt"></span>
+      <button class="btn btn-s btn-sm" type="button" id="autoDecisoesVer" onclick="_alternarListaDecisoesCusto()">Ver</button>
+      <button class="btn btn-s btn-sm" type="button" onclick="_desfazerTodasDecisoesCusto()">Desfazer todas</button>
+      <div id="autoDecisoesLista" class="cst-lista" style="display:none"></div>
     </div>
     <div>
       <div class="cl" style="margin-bottom:4px">Lista de entrada</div>
@@ -4730,7 +4755,7 @@ function abrirModoAuto() {
     var lblLp = document.getElementById('lpToggleLbl');
     if (lblLp) lblLp.textContent = 'Usar lista personalizada';
     _atualizarResumoLp();
-    _atualizarInfoIgnoradosCusto();
+    _atualizarInfoDecisoesCusto();
     _autoCodsParaMarcar = [];
     ov.classList.add('on');
 }
@@ -5084,46 +5109,239 @@ function _restaurarPrefBaseAuto() {
 }
 // Sobra máxima aceita sozinha no modo custo (acima disso, pede confirmação).
 var LIMITE_SOBRA_CUSTO_AUTO = 3;
-// Itens que o usuário mandou ignorar no modo custo (custo de compra maior que o
-// preço atual): { codigo: expiraEm (ms) } — 0 = "daqui em diante" (sem prazo).
-// "Somente nesta consulta" não é guardado: vale só para o processamento atual.
-var _CHAVE_IGNORADOS_CUSTO = 'est-auto-ignorar-custo';
-function _lerIgnoradosCusto() {
-    var mapa = {};
-    try { mapa = JSON.parse(localStorage.getItem(_CHAVE_IGNORADOS_CUSTO) || '{}') || {}; } catch (_) { mapa = {}; }
-    var agora = Date.now(), limpo = {}, mudou = false;
-    Object.keys(mapa).forEach(function(cod) {
-        var exp = Number(mapa[cod]);
-        if (exp === 0 || exp > agora) limpo[cod] = exp; else mudou = true;
+// Decisões guardadas no modo custo (custo de compra MAIOR que o preço de venda):
+// { codigo: { acao:'ignorar'|'usar', ate:'corrigir'|'sempre'|<ms fim do dia>,
+//             ass:'custo|preco', desc, em } }
+//   ignorar + 'corrigir' → fica de fora até o preço (ou o custo) ser corrigido;
+//   ignorar + <ms>       → fica de fora até o fim do dia;
+//   usar    + 'sempre'   → usa sem perguntar enquanto custo e preço forem os mesmos.
+// Qualquer decisão some sozinha quando o produto deixa de ter custo acima do preço.
+// "Só nesta consulta" não é guardado: vale só para o processamento atual.
+var _CHAVE_DECISOES_CUSTO = 'est-auto-custo-decisoes';
+var _CHAVE_IGNORADOS_CUSTO_ANTIGA = 'est-auto-ignorar-custo'; // formato da 5.55.0
+function _assinaturaCusto(custo, preco) {
+    return (Number(custo) || 0).toFixed(2) + '|' + (Number(preco) || 0).toFixed(2);
+}
+function _fimDoDiaMs() { var f = new Date(); f.setHours(23, 59, 59, 999); return f.getTime(); }
+function _salvarDecisoesCusto(mapa) {
+    try { localStorage.setItem(_CHAVE_DECISOES_CUSTO, JSON.stringify(mapa)); return true; }
+    catch (_) { return false; }
+}
+// Lê, migra o formato antigo e limpa entradas vencidas ou estragadas.
+function _lerDecisoesCusto() {
+    var bruto = null, mapa = {}, mudou = false, agora = Date.now();
+    try { bruto = JSON.parse(localStorage.getItem(_CHAVE_DECISOES_CUSTO) || '{}'); } catch (_) { bruto = null; mudou = true; }
+    if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto)) { bruto = {}; }
+    // Migração da 5.55.0: { codigo: 0 (daqui em diante) | expiraEm }.
+    var antigo = null;
+    try { antigo = localStorage.getItem(_CHAVE_IGNORADOS_CUSTO_ANTIGA); } catch (_) { antigo = null; }
+    if (antigo !== null) {
+        var mapaAntigo = {};
+        try { mapaAntigo = JSON.parse(antigo) || {}; } catch (_) { mapaAntigo = {}; }
+        if (mapaAntigo && typeof mapaAntigo === 'object') {
+            Object.keys(mapaAntigo).forEach(function(cod) {
+                if (bruto[cod]) return;
+                var exp = Number(mapaAntigo[cod]);
+                if (exp === 0) bruto[cod] = { acao: 'ignorar', ate: 'corrigir', ass: '', desc: '', em: agora };
+                else if (isFinite(exp) && exp > agora) bruto[cod] = { acao: 'ignorar', ate: exp, ass: '', desc: '', em: agora };
+            });
+        }
+        try { localStorage.removeItem(_CHAVE_IGNORADOS_CUSTO_ANTIGA); } catch (_) {}
+        mudou = true;
+    }
+    Object.keys(bruto).forEach(function(cod) {
+        var d = bruto[cod];
+        var ok = d && typeof d === 'object' && (
+            (d.acao === 'ignorar' && (d.ate === 'corrigir' || (isFinite(Number(d.ate)) && Number(d.ate) > agora))) ||
+            (d.acao === 'usar' && d.ate === 'sempre' && typeof d.ass === 'string' && d.ass)
+        );
+        if (ok) mapa[cod] = d; else mudou = true;
     });
-    if (mudou) { try { localStorage.setItem(_CHAVE_IGNORADOS_CUSTO, JSON.stringify(limpo)); } catch (_) {} }
-    return limpo;
+    if (mudou) _salvarDecisoesCusto(mapa);
+    return mapa;
 }
-function _ignorarItemCusto(codigo, escopo) {
-    if (escopo !== 'hoje' && escopo !== 'sempre') return;
-    var mapa = _lerIgnoradosCusto();
-    if (escopo === 'sempre') mapa[codigo] = 0;
-    else { var fim = new Date(); fim.setHours(23, 59, 59, 999); mapa[codigo] = fim.getTime(); }
-    try { localStorage.setItem(_CHAVE_IGNORADOS_CUSTO, JSON.stringify(mapa)); } catch (_) {}
-    _atualizarInfoIgnoradosCusto();
+// Vale a decisão guardada para o produto como ele está AGORA no banco?
+// Retorna 'ignorar' | 'usar' | 'apagar' (decisão não vale mais) | null (sem decisão).
+function _avaliarDecisaoCusto(d, custo, preco, acimaDoPreco, agora) {
+    if (!d) return null;
+    if (!acimaDoPreco) return 'apagar'; // preço (ou custo) corrigido: volta ao normal
+    if (d.acao === 'ignorar') {
+        if (d.ate === 'corrigir') return 'ignorar';
+        return Number(d.ate) > agora ? 'ignorar' : 'apagar';
+    }
+    if (d.acao === 'usar') return d.ass === _assinaturaCusto(custo, preco) ? 'usar' : 'apagar';
+    return 'apagar';
 }
-function _restaurarIgnoradosCusto() {
-    try { localStorage.removeItem(_CHAVE_IGNORADOS_CUSTO); } catch (_) {}
-    _atualizarInfoIgnoradosCusto();
-    toast('Itens ignorados no modo custo foram restaurados.', 3000);
+// Guarda a decisão. escopo: 'corrigir' | 'hoje' | 'sempre' ('consulta' não é guardado).
+function _guardarDecisaoCusto(it, acao, escopo) {
+    if (!it || (acao !== 'ignorar' && acao !== 'usar')) return;
+    var ate;
+    if (acao === 'ignorar' && escopo === 'corrigir') ate = 'corrigir';
+    else if (acao === 'ignorar' && escopo === 'hoje') ate = _fimDoDiaMs();
+    else if (acao === 'usar' && escopo === 'sempre') ate = 'sempre';
+    else return;
+    var mapa = _lerDecisoesCusto();
+    mapa[String(it.codigo)] = {
+        acao: acao, ate: ate,
+        ass:  _assinaturaCusto(it.custoCompra, it.precoVenda),
+        desc: String(it.descricao || '').slice(0, 80),
+        em:   Date.now()
+    };
+    if (!_salvarDecisoesCusto(mapa)) toast('Não foi possível guardar a decisão neste navegador (vale só nesta consulta).', 4000);
+    _atualizarInfoDecisoesCusto();
 }
-function _atualizarInfoIgnoradosCusto() {
-    var el = document.getElementById('autoIgnoradosInfo');
+function _textoDecisaoCusto(d) {
+    if (d.acao === 'usar') return 'usado mesmo com custo acima (até o custo ou o preço mudar)';
+    if (d.ate === 'corrigir') return 'fora até o preço ser corrigido';
+    return 'fora até o fim do dia';
+}
+function _desfazerDecisaoCusto(cod) {
+    var mapa = _lerDecisoesCusto();
+    delete mapa[cod];
+    _salvarDecisoesCusto(mapa);
+    _atualizarInfoDecisoesCusto();
+    toast('Decisão desfeita: o produto ' + cod + ' volta a ser perguntado.', 3000);
+}
+function _desfazerTodasDecisoesCusto() {
+    try { localStorage.removeItem(_CHAVE_DECISOES_CUSTO); } catch (_) {}
+    try { localStorage.removeItem(_CHAVE_IGNORADOS_CUSTO_ANTIGA); } catch (_) {}
+    _atualizarInfoDecisoesCusto();
+    toast('Todas as decisões do modo custo foram desfeitas.', 3000);
+}
+function _alternarListaDecisoesCusto() {
+    var lista = document.getElementById('autoDecisoesLista');
+    var bt = document.getElementById('autoDecisoesVer');
+    if (!lista) return;
+    var abrir = lista.style.display === 'none';
+    lista.style.display = abrir ? '' : 'none';
+    if (bt) bt.textContent = abrir ? 'Ocultar' : 'Ver';
+}
+function _atualizarInfoDecisoesCusto() {
+    var el = document.getElementById('autoDecisoesCusto');
     if (!el) return;
-    var mapa = _lerIgnoradosCusto();
+    var mapa = _lerDecisoesCusto();
     var cods = Object.keys(mapa);
     if (!cods.length) { el.style.display = 'none'; return; }
-    var sempre = cods.filter(function(c) { return mapa[c] === 0; }).length;
-    var txt = document.getElementById('autoIgnoradosTxt');
-    if (txt) txt.textContent = cods.length + ' item(ns) ignorado(s) no modo custo (' +
-        (cods.length - sempre) + ' s\u00f3 hoje, ' + sempre + ' daqui em diante): ' +
-        cods.slice(0, 6).join(', ') + (cods.length > 6 ? '...' : '');
+    var fora = cods.filter(function(c) { return mapa[c].acao === 'ignorar'; }).length;
+    var usa = cods.length - fora;
+    var txt = document.getElementById('autoDecisoesTxt');
+    if (txt) txt.textContent = 'Decisões guardadas do modo custo: ' +
+        fora + ' produto' + (fora === 1 ? '' : 's') + ' de fora, ' +
+        usa + ' liberado' + (usa === 1 ? '' : 's') + ' mesmo com custo acima do preço.';
+    var lista = document.getElementById('autoDecisoesLista');
+    if (lista) {
+        lista.innerHTML = '';
+        cods.sort().forEach(function(cod) {
+            var d = mapa[cod];
+            var linha = document.createElement('div'); linha.className = 'cst-lista-it';
+            var sp = document.createElement('span');
+            sp.textContent = cod + (d.desc ? ' — ' + d.desc : '') + ' · ' + _textoDecisaoCusto(d);
+            var b = document.createElement('button');
+            b.className = 'btn btn-s btn-sm'; b.type = 'button'; b.textContent = 'Desfazer';
+            b.addEventListener('click', function() { _desfazerDecisaoCusto(cod); });
+            linha.appendChild(sp); linha.appendChild(b);
+            lista.appendChild(linha);
+        });
+    }
     el.style.display = '';
+}
+// Diálogo do produto com custo de compra maior que o preço de venda.
+// "qtdOutros" = outros produtos na mesma situação ainda sem decisão nesta consulta.
+// "depois" recebe { acao:'usar'|'ignorar', escopo:'consulta'|'sempre'|'hoje'|'corrigir', todos:bool }.
+// Não fecha clicando fora nem com Esc: a decisão é obrigatória para seguir.
+function _modalCustoAcimaPreco(it, qtdOutros, depois) {
+    document.querySelectorAll('.modal-ov').forEach(function(old) {
+        if (old.parentNode) old.parentNode.removeChild(old);
+    });
+    function r$(v) { return 'R$' + (Number(v) || 0).toFixed(2).replace('.', ','); }
+    function pct(v) { return (Number(v) || 0).toFixed(1).replace('.', ',') + '%'; }
+    var custo = Number(it.custoCompra) || 0, preco = Number(it.precoVenda) || 0;
+    var dif = custo - preco;
+    var margem = preco > 0 ? ((preco - custo) / preco * 100) : 0;
+
+    var ov = document.createElement('div'); ov.className = 'modal-ov';
+    var bx = document.createElement('div'); bx.className = 'modal-bx cst-bx';
+    bx.setAttribute('role', 'dialog'); bx.setAttribute('aria-modal', 'true');
+    var ttl = document.createElement('div'); ttl.className = 'modal-ttl';
+    ttl.textContent = '⚠ Custo de compra maior que o preço de venda';
+    var prod = document.createElement('div'); prod.className = 'cst-prod';
+    prod.textContent = it.codigo + (it.descricao ? ' — ' + it.descricao : '');
+
+    var grid = document.createElement('div'); grid.className = 'cst-grid';
+    function linhaGrid(rot, val, neg) {
+        var a = document.createElement('span'); a.textContent = rot;
+        var b = document.createElement('b'); b.textContent = val; if (neg) b.className = 'cst-neg';
+        grid.appendChild(a); grid.appendChild(b);
+    }
+    linhaGrid('Custo de compra', r$(custo));
+    linhaGrid('Valor usado no modo custo (+10%)', r$(it.preco));
+    linhaGrid('Preço de venda atual', r$(preco));
+    linhaGrid('Diferença (custo acima do preço)', r$(dif), true);
+    linhaGrid('Margem atual (vende com prejuízo)', pct(margem), true);
+
+    var dica = document.createElement('div'); dica.className = 'cst-dica';
+    dica.textContent = 'Normalmente é preço desatualizado ou custo lançado errado no Small Commerce. ' +
+        'Vale conferir o cadastro do produto.';
+
+    var fechado = false;
+    function escolher(acao, escopo) {
+        if (fechado) return;
+        fechado = true;
+        var todos = !!(chk && chk.checked);
+        ov.classList.remove('on');
+        setTimeout(function() { if (ov.parentNode) ov.parentNode.removeChild(ov); }, 220);
+        depois({ acao: acao, escopo: escopo, todos: todos });
+    }
+    function botao(rotulo, dicaTxt, classe, acao, escopo) {
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = classe || 'btn btn-s btn-sm';
+        b.textContent = rotulo; b.title = dicaTxt;
+        b.addEventListener('click', function() { escolher(acao, escopo); });
+        return b;
+    }
+    function grupo(titulo, sub, botoes) {
+        var g = document.createElement('div'); g.className = 'cst-grupo';
+        var t = document.createElement('div'); t.className = 'cst-grupo-ttl'; t.textContent = titulo;
+        var st = document.createElement('div'); st.className = 'cst-grupo-sub'; st.textContent = sub;
+        var bs = document.createElement('div'); bs.className = 'cst-btns';
+        botoes.forEach(function(b) { bs.appendChild(b); });
+        g.appendChild(t); g.appendChild(st); g.appendChild(bs);
+        return g;
+    }
+    var bRecomendado = botao('Até o preço ser corrigido',
+        'Fica de fora até o preço (ou o custo) ser corrigido no Small Commerce; depois volta sozinho.',
+        'btn btn-p btn-sm', 'ignorar', 'corrigir');
+    var gIgnorar = grupo('Deixar o produto de fora (recomendado)',
+        'A linha é refeita sem ele. “Até o preço ser corrigido” volta sozinho quando o preço for acertado.',
+        [
+            botao('Só nesta consulta', 'Fica de fora só neste processamento.', null, 'ignorar', 'consulta'),
+            botao('Hoje', 'Fica de fora até o fim do dia.', null, 'ignorar', 'hoje'),
+            bRecomendado
+        ]);
+    var gUsar = grupo('Usar o produto mesmo assim',
+        'Entra com o valor do custo +10% (' + r$(it.preco) + ').',
+        [
+            botao('Só nesta consulta', 'Usa agora e pergunta de novo na próxima consulta.', null, 'usar', 'consulta'),
+            botao('Sempre', 'Não pergunta mais enquanto o custo e o preço forem os mesmos (se mudarem, volta a avisar).', null, 'usar', 'sempre')
+        ]);
+
+    var chk = null;
+    bx.appendChild(ttl); bx.appendChild(prod); bx.appendChild(grid); bx.appendChild(dica);
+    // A opção "fazer o mesmo" vem ANTES dos botões, para ser vista antes do clique.
+    if (qtdOutros > 0) {
+        var lbl = document.createElement('label'); lbl.className = 'cst-todos';
+        chk = document.createElement('input'); chk.type = 'checkbox';
+        var sp = document.createElement('span');
+        sp.textContent = 'Fazer o mesmo com ' + (qtdOutros === 1 ? 'o outro produto' : 'os outros ' + qtdOutros + ' produtos') +
+            ' com custo acima do preço nesta consulta';
+        lbl.appendChild(chk); lbl.appendChild(sp);
+        bx.appendChild(lbl);
+    }
+    bx.appendChild(gIgnorar); bx.appendChild(gUsar);
+    ov.appendChild(bx);
+    document.body.appendChild(ov);
+    requestAnimationFrame(function() { ov.classList.add('on'); });
+    try { bRecomendado.focus(); } catch (_) {}
 }
 // Custo de compra + 10%, em centavos exatos (null = item sem custo válido).
 function _valorCustoAuto(it) {
@@ -5785,21 +6003,31 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
     // motor (Agrupar/Combinar, estoque mínimo, lista personalizada,
     // reaproveitamento) funciona igual, sem nenhuma mudança; o preço de venda
     // original fica em "precoVenda". Itens sem custo de compra ficam de fora.
-    // Decisões sobre itens com custo de compra MAIOR que o preço atual:
-    // "usar" (prosseguir) ou ignorado só nesta consulta — valem até o fim deste
-    // processamento; "hoje"/"daqui em diante" ficam guardados no navegador.
+    // Decisões sobre itens com custo de compra MAIOR que o preço atual, nesta
+    // consulta: 'usar' ou 'ignorar'. As guardadas (hoje / até corrigir / sempre)
+    // vêm de _lerDecisoesCusto() e já entram aqui ao montar o pool.
     var _decisaoCustoAcima = {};
     // Linhas cuja sobra passou de LIMITE_SOBRA_CUSTO_AUTO: 'sim' (usar) ou 'nao'.
     var _sobraDecidida = {};
+    var _qtdIgnorados = 0;
     if (modoCusto) {
-        var _ignoradosPersist = _lerIgnoradosCusto();
-        var _qtdIgnorados = 0;
+        var _decisoesGuardadas = _lerDecisoesCusto();
+        var _decisoesMudaram = false, _agoraDec = Date.now();
         disponiveis = disponiveis.reduce(function(acc, it) {
-            if (Object.prototype.hasOwnProperty.call(_ignoradosPersist, String(it.codigo))) { _qtdIgnorados++; return acc; }
             var v = _valorCustoAuto(it);
-            if (v !== null) acc.push(Object.assign({}, it, { preco: v, precoVenda: Number(it.preco) || 0, custoCompra: Number(it.custo) }));
+            if (v === null) return acc;
+            var novo = Object.assign({}, it, { preco: v, precoVenda: Number(it.preco) || 0, custoCompra: Number(it.custo) });
+            var cod = String(novo.codigo);
+            if (Object.prototype.hasOwnProperty.call(_decisoesGuardadas, cod)) {
+                var av = _avaliarDecisaoCusto(_decisoesGuardadas[cod], novo.custoCompra, novo.precoVenda, _custoAcimaDoPreco(novo), _agoraDec);
+                if (av === 'ignorar') { _qtdIgnorados++; return acc; }
+                if (av === 'usar') _decisaoCustoAcima[novo.codigo] = 'usar';
+                if (av === 'apagar') { delete _decisoesGuardadas[cod]; _decisoesMudaram = true; }
+            }
+            acc.push(novo);
             return acc;
         }, []);
+        if (_decisoesMudaram) { _salvarDecisoesCusto(_decisoesGuardadas); _atualizarInfoDecisoesCusto(); }
         if (!disponiveis.length) {
             statusEl.textContent = 'Nenhum produto dispon\u00edvel tem custo de compra no banco \u2014 use o modo Normal.';
             statusEl.className   = 'auto-status er';
@@ -5834,36 +6062,36 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
         return null;
     }
     function _r$(v) { return 'R$' + Number(v).toFixed(2).replace('.', ','); }
-    // Pergunta o que fazer com o item; "depois" é chamado com a decisão tomada.
+    // Aplica a decisão a um produto: vale nesta consulta e, conforme o escopo,
+    // fica guardada. Ignorado sai do pool na hora (a linha é refeita sem ele).
+    function _aplicarDecisaoCusto(it, dec) {
+        _decisaoCustoAcima[it.codigo] = dec.acao;
+        if (dec.escopo !== 'consulta') _guardarDecisaoCusto(it, dec.acao, dec.escopo);
+        if (dec.acao === 'ignorar') {
+            var cod = String(it.codigo);
+            disponiveis = disponiveis.filter(function(x) { return String(x.codigo) !== cod; });
+        }
+    }
+    // Outros produtos do pool com custo acima do preço e ainda sem decisão.
+    function _outrosCustoAcimaPendentes(it) {
+        var cod = String(it.codigo);
+        return disponiveis.filter(function(x) {
+            return String(x.codigo) !== cod && _custoAcimaDoPreco(x) && !_decisaoCustoAcima[x.codigo];
+        });
+    }
+    // Pergunta o que fazer com o item; "depois" é chamado depois da decisão.
     function _perguntarCustoAcimaPreco(it, depois) {
-        var dif = Number(it.custoCompra) - Number(it.precoVenda);
-        var pct = it.precoVenda > 0 ? (dif / it.precoVenda * 100) : 0;
-        var ignorar = function(escopo) {
-            _decisaoCustoAcima[it.codigo] = 'ignorar';
-            _ignorarItemCusto(String(it.codigo), escopo);
-            disponiveis = disponiveis.filter(function(x) { return x.codigo !== it.codigo; });
-            depois();
-        };
-        statusEl.textContent = 'Aguardando sua decis\u00e3o sobre o item ' + it.codigo + '...';
-        _modalConfirm(
-            'O produto ' + it.codigo + ' \u2014 ' + (it.descricao || '') + ' tem o custo de compra MAIOR que o pre\u00e7o atual de venda.' +
-            '\\n\\nCusto de compra: ' + _r$(it.custoCompra) + ' (com +10%: ' + _r$(it.preco) + ')' +
-            '\\nPre\u00e7o atual: ' + _r$(it.precoVenda) +
-            '\\nDiferen\u00e7a: o custo est\u00e1 ' + _r$(dif) + ' acima do pre\u00e7o (' + pct.toFixed(1).replace('.', ',') + '%).' +
-            '\\n\\nDeseja prosseguir usando este produto ou ignor\u00e1-lo?',
-            function() { _decisaoCustoAcima[it.codigo] = 'usar'; depois(); },
-            function() { ignorar('consulta'); },
-            {
-                titulo:      'Custo de compra maior que o pre\u00e7o atual',
-                okLabel:     'Prosseguir com o item',
-                okClass:     'btn btn-p btn-sm',
-                cancelLabel: 'Ignorar s\u00f3 nesta consulta',
-                botoesExtras: [
-                    { label: 'Ignorar hoje',            acao: function() { ignorar('hoje'); } },
-                    { label: 'Ignorar daqui em diante', acao: function() { ignorar('sempre'); } }
-                ]
+        var outros = _outrosCustoAcimaPendentes(it);
+        statusEl.textContent = 'Aguardando sua decisão sobre o produto ' + it.codigo + ' (custo acima do preço)...';
+        _modalCustoAcimaPreco(it, outros.length, function(dec) {
+            _aplicarDecisaoCusto(it, dec);
+            if (dec.todos) outros.forEach(function(x) { _aplicarDecisaoCusto(x, dec); });
+            if (dec.escopo !== 'consulta') {
+                var n = 1 + (dec.todos ? outros.length : 0);
+                toast('Decisão guardada para ' + n + ' produto' + (n === 1 ? '' : 's') + ' (pode desfazer em “Decisões guardadas”).', 3500);
             }
-        );
+            depois();
+        });
     }
     // Sobra acima de LIMITE_SOBRA_CUSTO_AUTO: pede confirmação antes de usar.
     function _perguntarSobraCusto(linhaTxt, valorPedido, res, depois) {
