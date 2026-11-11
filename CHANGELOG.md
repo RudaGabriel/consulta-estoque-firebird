@@ -9,7 +9,7 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.54.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.55.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.31.0**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.13.0**.
@@ -24,6 +24,21 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.55.0 (2026-11-11)
+
+```text
+Modo Automático, valor de referência "Custo de compra":
+  - A soma nunca fica abaixo do valor pedido; até +R$3,00 de sobra é aceita
+    sozinha; acima disso pede confirmação ("Usar combinação" ou "Deixar como
+    não encontrado").
+  - Produto com custo de compra MAIOR que o preço atual de venda: avisa com
+    custo, custo +10%, preço atual e a diferença (R$ e %), e pergunta:
+    Prosseguir com o item, Ignorar só nesta consulta, Ignorar hoje ou Ignorar
+    daqui em diante. Os ignorados ficam guardados no navegador e aparecem no
+    Modo Automático com o botão "Restaurar".
+  - Saída sem espaço antes do valor: "10014(R$149,05) 10011(R$99,00)".
+```
 
 ### 5.54.0 (2026-11-10)
 

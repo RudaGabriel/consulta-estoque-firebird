@@ -5,20 +5,19 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.54.0
+ * @version 5.55.0
  * @changelog
- *   5.54.0 - 2026-11-10 - Modo Automático:
- *     - Novo "Valor de referência": Normal (preço de venda, como sempre) ou
- *       Custo de compra (custo de compra + 10%). No modo custo, o pool recebe
- *       cópias dos itens com esse valor e o motor de combinação funciona igual
- *       (Agrupar/Combinar, estoque mínimo, lista personalizada,
- *       reaproveitamento); cada código sai com o valor usado, ex.:
- *       "10014 (R$149,05) 10011 (R$99,00)". Itens sem custo ficam de fora.
- *     - O servidor lê o custo de compra (CUSTOCOMPR no Small Commerce, ou
- *       CUSTO_COMPRA/PRECO_CUSTO/CUSTOMEDIO...) na consulta principal e na da
- *       lista personalizada, e o envia à tela (item.custo).
- *     - Com resultado, a tela rola até o botão "Copiar resultado"
- *       (scrollIntoView em #autoCopyBtn).
+ *   5.55.0 - 2026-11-11 - Modo Automático, valor de referência "Custo de compra":
+ *     - A soma nunca fica abaixo do valor pedido; até +R$3,00 de sobra é
+ *       aceita sozinha; acima disso pede confirmação ("Usar combinação" ou
+ *       "Deixar como não encontrado").
+ *     - Produto com custo de compra MAIOR que o preço atual de venda: avisa
+ *       com custo, custo +10%, preço atual e a diferença (R$ e %), e pergunta:
+ *       "Prosseguir com o item", "Ignorar só nesta consulta", "Ignorar hoje"
+ *       ou "Ignorar daqui em diante". Os ignorados ficam guardados no
+ *       navegador e aparecem no Modo Automático com o botão "Restaurar".
+ *     - Saída sem espaço antes do valor: "10014(R$149,05) 10011(R$99,00)".
+ *     - Modal de confirmação aceita botões extras; rodapé quebra linha.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
  * NÃO depende de gerar-relatorio-html.js nem servidor-relatorio.js.
@@ -2356,7 +2355,7 @@ td{padding:7px 12px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis
 .modal-msg-lista{font-size:12.5px;color:var(--txt2);line-height:1.6;margin-bottom:18px;white-space:pre-line;
   flex-shrink:0;max-height:220px;overflow-y:auto;
   background:var(--bg3);border:1px solid var(--brd);border-radius:6px;padding:8px 10px}
-.modal-ftr{display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+.modal-ftr{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;flex-shrink:0}
 
 /* ─ SCROLLBAR FINA ─────────────────────────────────────────────────────── */
 ::-webkit-scrollbar{width:5px;height:5px}
@@ -2829,6 +2828,10 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
         <span>Custo de compra <small>(+10%)</small></span>
       </label>
     </div>
+    <div id="autoIgnoradosInfo" style="display:none;font-size:11.5px;color:var(--txt3)">
+      <span id="autoIgnoradosTxt"></span>
+      <button class="btn btn-s btn-sm" type="button" onclick="_restaurarIgnoradosCusto()" style="margin-left:6px;padding:2px 8px">Restaurar</button>
+    </div>
     <div>
       <div class="cl" style="margin-bottom:4px">Lista de entrada</div>
       <textarea class="auto-ta" id="autoInput" placeholder="Cole aqui a lista..."></textarea>
@@ -3092,10 +3095,19 @@ function _modalConfirm(msg, onOk, onCancel, opts) {
     txt.textContent = msg;
     var ftr = document.createElement('div');  ftr.className = 'modal-ftr';
     var bNo = document.createElement('button'); bNo.className = 'btn btn-s btn-sm';
-    bNo.textContent = 'Cancelar';
+    bNo.textContent = opts.cancelLabel || 'Cancelar';
     var bOk = document.createElement('button'); bOk.className = opts.okClass || 'btn btn-d btn-sm';
     bOk.textContent = opts.okLabel || 'Confirmar';
-    ftr.appendChild(bNo); ftr.appendChild(bOk);
+    ftr.appendChild(bNo);
+    // Botões extras entre "Cancelar" e o principal: [{ label, classe, acao }].
+    (opts.botoesExtras || []).forEach(function(be) {
+        var b = document.createElement('button');
+        b.className = be.classe || 'btn btn-s btn-sm';
+        b.textContent = be.label;
+        b.addEventListener('click', function() { fechar(); if (be.acao) be.acao(); }, { once: true });
+        ftr.appendChild(b);
+    });
+    ftr.appendChild(bOk);
     bx.appendChild(ttl); bx.appendChild(txt);
     if (opts.itensScroll && opts.itensScroll.length) {
         var lista = document.createElement('div'); lista.className = 'modal-msg-lista';
@@ -4718,6 +4730,7 @@ function abrirModoAuto() {
     var lblLp = document.getElementById('lpToggleLbl');
     if (lblLp) lblLp.textContent = 'Usar lista personalizada';
     _atualizarResumoLp();
+    _atualizarInfoIgnoradosCusto();
     _autoCodsParaMarcar = [];
     ov.classList.add('on');
 }
@@ -5068,6 +5081,49 @@ function _restaurarPrefBaseAuto() {
     var rn = document.getElementById('autoBaseNormal');
     if (rc) rc.checked = custo;
     if (rn) rn.checked = !custo;
+}
+// Sobra máxima aceita sozinha no modo custo (acima disso, pede confirmação).
+var LIMITE_SOBRA_CUSTO_AUTO = 3;
+// Itens que o usuário mandou ignorar no modo custo (custo de compra maior que o
+// preço atual): { codigo: expiraEm (ms) } — 0 = "daqui em diante" (sem prazo).
+// "Somente nesta consulta" não é guardado: vale só para o processamento atual.
+var _CHAVE_IGNORADOS_CUSTO = 'est-auto-ignorar-custo';
+function _lerIgnoradosCusto() {
+    var mapa = {};
+    try { mapa = JSON.parse(localStorage.getItem(_CHAVE_IGNORADOS_CUSTO) || '{}') || {}; } catch (_) { mapa = {}; }
+    var agora = Date.now(), limpo = {}, mudou = false;
+    Object.keys(mapa).forEach(function(cod) {
+        var exp = Number(mapa[cod]);
+        if (exp === 0 || exp > agora) limpo[cod] = exp; else mudou = true;
+    });
+    if (mudou) { try { localStorage.setItem(_CHAVE_IGNORADOS_CUSTO, JSON.stringify(limpo)); } catch (_) {} }
+    return limpo;
+}
+function _ignorarItemCusto(codigo, escopo) {
+    if (escopo !== 'hoje' && escopo !== 'sempre') return;
+    var mapa = _lerIgnoradosCusto();
+    if (escopo === 'sempre') mapa[codigo] = 0;
+    else { var fim = new Date(); fim.setHours(23, 59, 59, 999); mapa[codigo] = fim.getTime(); }
+    try { localStorage.setItem(_CHAVE_IGNORADOS_CUSTO, JSON.stringify(mapa)); } catch (_) {}
+    _atualizarInfoIgnoradosCusto();
+}
+function _restaurarIgnoradosCusto() {
+    try { localStorage.removeItem(_CHAVE_IGNORADOS_CUSTO); } catch (_) {}
+    _atualizarInfoIgnoradosCusto();
+    toast('Itens ignorados no modo custo foram restaurados.', 3000);
+}
+function _atualizarInfoIgnoradosCusto() {
+    var el = document.getElementById('autoIgnoradosInfo');
+    if (!el) return;
+    var mapa = _lerIgnoradosCusto();
+    var cods = Object.keys(mapa);
+    if (!cods.length) { el.style.display = 'none'; return; }
+    var sempre = cods.filter(function(c) { return mapa[c] === 0; }).length;
+    var txt = document.getElementById('autoIgnoradosTxt');
+    if (txt) txt.textContent = cods.length + ' item(ns) ignorado(s) no modo custo (' +
+        (cods.length - sempre) + ' s\u00f3 hoje, ' + sempre + ' daqui em diante): ' +
+        cods.slice(0, 6).join(', ') + (cods.length > 6 ? '...' : '');
+    el.style.display = '';
 }
 // Custo de compra + 10%, em centavos exatos (null = item sem custo válido).
 function _valorCustoAuto(it) {
@@ -5729,10 +5785,19 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
     // motor (Agrupar/Combinar, estoque mínimo, lista personalizada,
     // reaproveitamento) funciona igual, sem nenhuma mudança; o preço de venda
     // original fica em "precoVenda". Itens sem custo de compra ficam de fora.
+    // Decisões sobre itens com custo de compra MAIOR que o preço atual:
+    // "usar" (prosseguir) ou ignorado só nesta consulta — valem até o fim deste
+    // processamento; "hoje"/"daqui em diante" ficam guardados no navegador.
+    var _decisaoCustoAcima = {};
+    // Linhas cuja sobra passou de LIMITE_SOBRA_CUSTO_AUTO: 'sim' (usar) ou 'nao'.
+    var _sobraDecidida = {};
     if (modoCusto) {
+        var _ignoradosPersist = _lerIgnoradosCusto();
+        var _qtdIgnorados = 0;
         disponiveis = disponiveis.reduce(function(acc, it) {
+            if (Object.prototype.hasOwnProperty.call(_ignoradosPersist, String(it.codigo))) { _qtdIgnorados++; return acc; }
             var v = _valorCustoAuto(it);
-            if (v !== null) acc.push(Object.assign({}, it, { preco: v, precoVenda: it.preco, custoCompra: Number(it.custo) }));
+            if (v !== null) acc.push(Object.assign({}, it, { preco: v, precoVenda: Number(it.preco) || 0, custoCompra: Number(it.custo) }));
             return acc;
         }, []);
         if (!disponiveis.length) {
@@ -5753,8 +5818,77 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
         });
         return ordem.map(function(cod) {
             var c = contagem[cod];
-            return (c.qtd > 1 ? c.qtd + '*' : '') + cod + ' (R$' + c.valor.toFixed(2).replace('.', ',') + ')';
+            return (c.qtd > 1 ? c.qtd + '*' : '') + cod + '(R$' + c.valor.toFixed(2).replace('.', ',') + ')';
         }).join(' ');
+    }
+
+    // ── Modo custo: custo de compra MAIOR que o preço atual de venda ───────────
+    function _custoAcimaDoPreco(it) {
+        return modoCusto && Number(it.precoVenda) > 0 && Number(it.custoCompra) > Number(it.precoVenda) + 0.004;
+    }
+    // 1º item da combinação com custo acima do preço e sem decisão nesta consulta.
+    function _itemCustoAcimaPendente(itens) {
+        for (var i = 0; i < itens.length; i++) {
+            if (_custoAcimaDoPreco(itens[i]) && !_decisaoCustoAcima[itens[i].codigo]) return itens[i];
+        }
+        return null;
+    }
+    function _r$(v) { return 'R$' + Number(v).toFixed(2).replace('.', ','); }
+    // Pergunta o que fazer com o item; "depois" é chamado com a decisão tomada.
+    function _perguntarCustoAcimaPreco(it, depois) {
+        var dif = Number(it.custoCompra) - Number(it.precoVenda);
+        var pct = it.precoVenda > 0 ? (dif / it.precoVenda * 100) : 0;
+        var ignorar = function(escopo) {
+            _decisaoCustoAcima[it.codigo] = 'ignorar';
+            _ignorarItemCusto(String(it.codigo), escopo);
+            disponiveis = disponiveis.filter(function(x) { return x.codigo !== it.codigo; });
+            depois();
+        };
+        statusEl.textContent = 'Aguardando sua decis\u00e3o sobre o item ' + it.codigo + '...';
+        _modalConfirm(
+            'O produto ' + it.codigo + ' \u2014 ' + (it.descricao || '') + ' tem o custo de compra MAIOR que o pre\u00e7o atual de venda.' +
+            '\\n\\nCusto de compra: ' + _r$(it.custoCompra) + ' (com +10%: ' + _r$(it.preco) + ')' +
+            '\\nPre\u00e7o atual: ' + _r$(it.precoVenda) +
+            '\\nDiferen\u00e7a: o custo est\u00e1 ' + _r$(dif) + ' acima do pre\u00e7o (' + pct.toFixed(1).replace('.', ',') + '%).' +
+            '\\n\\nDeseja prosseguir usando este produto ou ignor\u00e1-lo?',
+            function() { _decisaoCustoAcima[it.codigo] = 'usar'; depois(); },
+            function() { ignorar('consulta'); },
+            {
+                titulo:      'Custo de compra maior que o pre\u00e7o atual',
+                okLabel:     'Prosseguir com o item',
+                okClass:     'btn btn-p btn-sm',
+                cancelLabel: 'Ignorar s\u00f3 nesta consulta',
+                botoesExtras: [
+                    { label: 'Ignorar hoje',            acao: function() { ignorar('hoje'); } },
+                    { label: 'Ignorar daqui em diante', acao: function() { ignorar('sempre'); } }
+                ]
+            }
+        );
+    }
+    // Sobra acima de LIMITE_SOBRA_CUSTO_AUTO: pede confirmação antes de usar.
+    function _perguntarSobraCusto(linhaTxt, valorPedido, res, depois) {
+        statusEl.textContent = 'Aguardando sua confirma\u00e7\u00e3o (sobra acima de ' + _r$(LIMITE_SOBRA_CUSTO_AUTO) + ')...';
+        _modalConfirm(
+            'Linha: "' + linhaTxt.trim() + '" \u2014 valor ' + _r$(valorPedido) +
+            '\\n\\nA combina\u00e7\u00e3o mais pr\u00f3xima (custo de compra +10%) passa do valor em ' + _r$(res.diff) +
+            ' (soma ' + _r$(res.soma) + '), acima do limite autom\u00e1tico de ' + _r$(LIMITE_SOBRA_CUSTO_AUTO) + '.' +
+            '\\n\\n' + _formatarItensHumano(res.itens) +
+            '\\n\\nUsar esta combina\u00e7\u00e3o?',
+            function() { depois(true); },
+            function() { depois(false); },
+            { titulo: 'Valor acima do pedido', okLabel: 'Usar combina\u00e7\u00e3o', okClass: 'btn btn-p btn-sm', cancelLabel: 'Deixar como n\u00e3o encontrado' }
+        );
+    }
+    function _formatarItensHumano(itens) {
+        var contagem = {}, ordem = [];
+        itens.forEach(function(it) {
+            if (!contagem[it.codigo]) { contagem[it.codigo] = { qtd: 0, preco: Number(it.preco || 0) }; ordem.push(it.codigo); }
+            contagem[it.codigo].qtd++;
+        });
+        return ordem.map(function(cod) {
+            var c = contagem[cod];
+            return c.qtd + 'x ' + cod + ' (R$' + c.preco.toFixed(2).replace('.', ',') + (modoCusto ? ' cada, custo +10%)' : ' cada)');
+        }).join(' + ');
     }
 
     var usadosSession  = {};
@@ -5891,6 +6025,32 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
                 resultado = _validarResultadoPadrao(resultado, _S.estoqueMinimo, null, null, _S.proibidosEmbutidos, _S.proibidosExtra);
             }
 
+            // Modo custo: decisões do usuário ANTES de aceitar a linha. A linha é
+            // refeita depois da resposta (a busca é determinística e nada foi
+            // consumido ainda), então nenhum contador fica pela metade.
+            var _sobraRecusada = false;
+            if (modoCusto && resultado && resultado.itens && resultado.itens.length > 0) {
+                var _idxAtual = idxLinha - 1;
+                var _alerta = _itemCustoAcimaPendente(resultado.itens);
+                if (_alerta) {
+                    idxLinha = _idxAtual;
+                    _perguntarCustoAcimaPreco(_alerta, function() { setTimeout(_processarProxima, 0); });
+                    return;
+                }
+                var _sobra = typeof resultado.diff === 'number' ? resultado.diff : (Number(resultado.soma) - valor);
+                if (_sobra > LIMITE_SOBRA_CUSTO_AUTO + 0.004) {
+                    if (!_sobraDecidida[_idxAtual]) {
+                        idxLinha = _idxAtual;
+                        _perguntarSobraCusto(linha, valor, resultado, function(usar) {
+                            _sobraDecidida[_idxAtual] = usar ? 'sim' : 'nao';
+                            setTimeout(_processarProxima, 0);
+                        });
+                        return;
+                    }
+                    if (_sobraDecidida[_idxAtual] === 'nao') { resultado = null; _sobraRecusada = true; }
+                }
+            }
+
             if (resultado && resultado.itens && resultado.itens.length > 0) {
                 if (lpAtiva) {
                     // Lista personalizada: NÃO marca como usado no servidor — os
@@ -5933,7 +6093,7 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
             } else {
                 saida.push(linha + TAB + '[NAO ENCONTRADO]');
                 naoEncontrados++;
-                if (lpAtiva) {
+                if (lpAtiva && !_sobraRecusada) {
                     _linhasPendentesExcedente.push({ idx: saida.length - 1, linha: linha, valor: valor });
                 }
             }
@@ -5999,7 +6159,11 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
 
         function _atualizarMsgFinal() {
             var msg = '\u2713 Processado: ' + encontrados + ' linha' + (encontrados === 1 ? '' : 's') + ' com c\u00f3digos';
-            if (modoCusto) msg += ' \u2014 base: custo de compra +10%';
+            if (modoCusto) {
+                msg += ' \u2014 base: custo de compra +10%';
+                var _ignAgora = Object.keys(_decisaoCustoAcima).filter(function(c) { return _decisaoCustoAcima[c] === 'ignorar'; }).length;
+                if (_qtdIgnorados + _ignAgora > 0) msg += ' (' + (_qtdIgnorados + _ignAgora) + ' item(ns) ignorado(s) por custo acima do pre\u00e7o)';
+            }
             if (naoEncontrados > 0) msg += ', ' + naoEncontrados + ' n\u00e3o encontrado' + (naoEncontrados === 1 ? '' : 's');
             if (lpAtiva) {
                 msg += ' \u2014 lista personalizada (c\u00f3digos n\u00e3o marcados como usados)';
@@ -6031,20 +6195,6 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
             btn.disabled = false;
         }
 
-        // ── Formata os itens de uma combinação de forma legível para o modal ──────
-        // Ex.: "3x 08395 (R$16,90 cada)" + " + 1x 00123 (R$5,00 cada)"
-        function _formatarItensHumano(itens) {
-            var contagem = {};
-            var ordem    = [];
-            itens.forEach(function(it) {
-                if (!contagem[it.codigo]) { contagem[it.codigo] = { qtd: 0, preco: Number(it.preco || 0) }; ordem.push(it.codigo); }
-                contagem[it.codigo].qtd++;
-            });
-            return ordem.map(function(cod) {
-                var c = contagem[cod];
-                return c.qtd + 'x ' + cod + ' (R$' + c.preco.toFixed(2).replace('.', ',') + (modoCusto ? ' cada, custo +10%)' : ' cada)');
-            }).join(' + ');
-        }
 
         // ── Lista personalizada: revisão das linhas sem combinação exata ──────────
         // Para cada linha marcada como [NAO ENCONTRADO], busca (sem o teto de
@@ -6086,6 +6236,14 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
             );
             // Mesma camada defensiva da busca normal — ver comentário acima.
             resExc = _validarResultadoLista(resExc, _usosLPPorCod, _estoqueParadaPorCod);
+
+            if (modoCusto && resExc && resExc.itens && resExc.itens.length) {
+                var _alertaExc = _itemCustoAcimaPendente(resExc.itens);
+                if (_alertaExc) {
+                    _perguntarCustoAcimaPreco(_alertaExc, function() { _processarProximoExcedente(idxPendente); });
+                    return;
+                }
+            }
 
             if (resExc && resExc.itens && resExc.itens.length) {
                 _modalConfirm(
