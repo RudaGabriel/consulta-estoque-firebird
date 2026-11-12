@@ -5,11 +5,12 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.59.0
+ * @version 5.60.0
  * @changelog
- *   5.59.0 - 2026-11-12 - Projeto autônomo: saem as menções a outros
- *     projetos (cabeçalho e comentários). Rodapé da página com os créditos:
- *     "Consulta Estoque — desenvolvido por Ruda Gabriel".
+ *   5.60.0 - 2026-11-12 - Projeto neutro: saem os nomes de terceiros dos
+ *     textos da tela, do log e dos comentários (agora "ERP"); exemplo do
+ *     caminho do banco nas Configurações: C:\Dados\SMALL.FDB. Ficam só os
+ *     nomes de pasta/arquivo que a busca automática do banco precisa.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
@@ -418,7 +419,7 @@ function detectarFdb() {
         } catch (_) {}
     }
 
-    // Tenta ler o caminho da .FDB do INI do SmallSoft (evita hardcode do path)
+    // Tenta ler o caminho da .FDB do INI do ERP (evita hardcode do path)
     const iniCandidatos = [
         pf86 + "\\SmallSoft\\Small Commerce\\Small.ini",
         pf86 + "\\SmallSoft\\Small Commerce\\SmallCommerce.ini",
@@ -478,7 +479,7 @@ function _portaAberta(host, porta, timeoutMs) {
 }
 
 // ── Descoberta automática do banco ──────────────────────────────────────────
-// Objetivo: achar sozinho ONDE está o banco do Small Commerce (qual servidor e
+// Objetivo: achar sozinho ONDE está o banco do ERP (qual servidor e
 // qual caminho do .FDB) e conectar, sem o usuário editar nada. Uma combinação
 // host+caminho só é adotada quando o banco ABRE (attach real) E tem a tabela de
 // produtos (detectarTabelaProduto) — nunca um Firebird que só tem a porta
@@ -571,7 +572,7 @@ async function _primeiraCombinacaoQueAbre(combos, probe, prazoMs) {
     return { combo: null, falhas };
 }
 
-// Tenta abrir o banco `caminho` no `host` e confirma que é um banco do Small
+// Tenta abrir o banco `caminho` no `host` e confirma que é um banco do ERP
 // Commerce (tem a tabela de produtos). Resolve { ok, auth, motivo }; auth=true
 // quando o banco existe mas o usuário/senha do Firebird não conferem.
 async function _bancoAbreEm(host, caminho) {
@@ -606,13 +607,13 @@ function _abrirBancoEValidar(host, caminho) {
             try { detectado = await detectarTabelaProduto(con.db); } catch (_) { detectado = null; }
             clearTimeout(t);
             if (detectado) return fim({ ok: true });
-            fim({ ok: false, motivo: "o banco abriu, mas n\u00e3o tem a tabela de produtos do Small Commerce" });
+            fim({ ok: false, motivo: "o banco abriu, mas n\u00e3o tem a tabela de produtos do ERP" });
         }).catch(e => { clearTimeout(t); fim({ ok: false, motivo: String((e && e.message) || e) }); });
     });
 }
 
 // Caminhos possíveis do banco no disco do SERVIDOR (que pode não ser esta
-// máquina): o configurado, os `extras` (vindos do .ini do Small Commerce e das
+// máquina): o configurado, os `extras` (vindos do .ini do ERP e das
 // pastas achadas no disco local — servidores costumam repetir a estrutura),
 // as instalações típicas nas unidades C: a H:. Só caminhos de SMALL.FDB. Tentar um
 // caminho errado num servidor que responde custa milissegundos.
@@ -671,10 +672,10 @@ function _extrairBancosDeIni(texto) {
     return { bancos, hosts };
 }
 
-// Lê os .ini das pastas do Small Commerce (instalações típicas em C: a H: e as
-// `pastasExtras` achadas na busca em disco). O próprio Small Commerce sabe
+// Lê os .ini das pastas do ERP (instalações típicas em C: a H: e as
+// `pastasExtras` achadas na busca em disco). O próprio ERP sabe
 // onde está o banco — é a pista mais confiável.
-async function _lerInisSmallCommerce(pastasExtras, hostDaPasta) {
+async function _lerInisDoErp(pastasExtras, hostDaPasta) {
     const pastas = [];
     for (const u of ["C", "D", "E", "F", "G", "H"]) {
         pastas.push(u + ":\\Program Files (x86)\\SmallSoft\\Small Commerce");
@@ -707,7 +708,7 @@ async function _lerInisSmallCommerce(pastasExtras, hostDaPasta) {
                 for (const b of r.bancos) bancos.push(Object.assign({}, b, { origemHost }));
                 for (const h of r.hosts) if (hosts.indexOf(h) === -1) hosts.push(h);
                 if (r.bancos.length || r.hosts.length) {
-                    logTs("Busca: configura\u00e7\u00e3o do Small Commerce lida em " + arq);
+                    logTs("Busca: configura\u00e7\u00e3o do ERP lida em " + arq);
                 }
             } catch (_) {}
         }
@@ -760,21 +761,21 @@ function _locaisEmUso(detalhes, agora, janelaMs) {
         .sort((a, b) => b.mtime - a.mtime);
 }
 
-// Pastas que nunca têm o banco do Small Commerce (ou são do próprio sistema).
+// Pastas que nunca têm o banco do ERP (ou são do próprio sistema).
 const _PASTAS_IGNORADAS = new Set([
     "windows", "$recycle.bin", "system volume information", "recovery", "perflogs",
     "$windows.~bt", "$windows.~ws", "msocache", "windowsapps", "winsxs",
     "node_modules", ".git", "appdata", "intel", "amd", "nvidia", "examples"
 ]);
-// Bancos do próprio Firebird / de exemplo: nunca são o do Small Commerce.
+// Bancos do próprio Firebird / de exemplo: nunca são o do ERP.
 const _FDB_IGNORADOS = /^(security\d*|employee|help|isc4|mon\$.*)\.fdb$/i;
 
 // Procura arquivos .FDB no disco local, com limites de profundidade,
 // quantidade e tempo para não pesar no PC. Pastas com "small", "dados",
 // "banco" no nome são visitadas primeiro. Com `opcoes.pastasIni` (array), anota
-// também as pastas "do Small Commerce" que contêm arquivos .ini.
+// também as pastas "do ERP" que contêm arquivos .ini.
 // Ordena: SMALL.FDB primeiro; entre eles, o que está numa pasta de
-// INSTALAÇÃO ("Small Commerce", "SmallSoft") vem antes de cópias soltas; por
+// INSTALAÇÃO do ERP vem antes de cópias soltas; por
 // fim, o modificado mais recentemente (o banco em uso é alterado o tempo todo).
 async function _buscarArquivosFdbLocais(raizes, opcoes) {
     opcoes = opcoes || {};
@@ -796,7 +797,7 @@ async function _buscarArquivosFdbLocais(raizes, opcoes) {
             const nome = e.name;
             const caminho = path.join(dir, nome);
             if (e.isFile() && /\.fdb$/i.test(nome)) {
-                // Só o banco do Small Commerce: SMALL.FDB (padrao.fdb, exemplo.fdb,
+                // Só o banco do ERP: SMALL.FDB (padrao.fdb, exemplo.fdb,
                 // off.fdb, monitor.fdb e cópias SMALL_OFFLINE_* ficam de fora).
                 if (_FDB_IGNORADOS.test(nome) || !_ehArquivoSmall(nome)) continue;
                 let mtime = 0;
@@ -871,20 +872,20 @@ function _agendarScanRede() {
     });
 }
 
-// Puro: o arquivo é o banco do Small Commerce? Só "SMALL.FDB" (qualquer caixa)
+// Puro: o arquivo é o banco do ERP? Só "SMALL.FDB" (qualquer caixa)
 // — padrao.fdb, exemplo.fdb, off.fdb, monitor.fdb e cópias de consulta nunca.
 function _ehArquivoSmall(caminho) {
     const s = String(caminho || "").trim().replace(/\//g, "\\");
     return /(?:^|[\\:])small\.fdb$/i.test(s);
 }
 
-// Puro: nome do servidor de um caminho UNC ("\\SERVIDOR\SmallSoft" → "SERVIDOR").
+// Puro: nome do servidor de um caminho UNC ("\\SERVIDOR\ERP" → "SERVIDOR").
 function _hostDeUnc(unc) {
     const m = /^\\\\([A-Za-z0-9][\w.\-]*)\\/.exec(String(unc || "").trim() + "\\");
     return m ? m[1] : null;
 }
 
-// Puro: caminhos UNC citados num atalho (.lnk) do Small Commerce. O .lnk é
+// Puro: caminhos UNC citados num atalho (.lnk) do ERP. O .lnk é
 // binário, com os caminhos em ANSI e/ou UTF-16 — procura nos dois.
 function _extrairUncDeAtalho(buf) {
     const hosts = [], pastas = [];
@@ -941,7 +942,7 @@ function _comPrazo(promessa, ms, padrao) {
     });
 }
 
-// Unidades de rede mapeadas: [{ letra: "H:", unc: "\\SERVIDOR\SmallSoft" }].
+// Unidades de rede mapeadas: [{ letra: "H:", unc: "\\SERVIDOR\ERP" }].
 function _unidadesDeRede() {
     return new Promise(resolve => {
         if (process.platform !== "win32") return resolve([]);
@@ -963,7 +964,7 @@ function _unidadesDeRede() {
 }
 
 // Atalhos (.lnk) da Área de Trabalho e do Menu Iniciar que apontam para o
-// Small Commerce num compartilhamento de rede.
+// ERP num compartilhamento de rede.
 async function _pistasDeAtalhos() {
     const pastas = [];
     const e = process.env;
@@ -995,14 +996,14 @@ async function _pistasDeAtalhos() {
 
 // Descobre sozinho onde está o banco (servidor + caminho do SMALL.FDB), conecta
 // e SOBRESCREVE a configuração quando a atual falha. Só adota uma combinação em
-// que o banco ABRE e tem a tabela de produtos do Small Commerce, e só arquivos
+// que o banco ABRE e tem a tabela de produtos do ERP, e só arquivos
 // chamados SMALL.FDB (nunca padrao.fdb, exemplo.fdb, cópias de consulta...).
 // A meta é ler o banco PELA REDE; o Firebird desta máquina é a ÚLTIMA opção.
 // Ordem:
-//   (1) a configuração do próprio Small Commerce: .ini desta máquina, das
-//       unidades de rede mapeadas e dos compartilhamentos do servidor (o Small
-//       costuma rodar de \\SERVIDOR\SmallSoft\Small Commerce), e os atalhos do
-//       Small na Área de Trabalho/Menu Iniciar — com o servidor citado neles;
+//   (1) a configuração do próprio ERP: .ini desta máquina, das
+//       unidades de rede mapeadas e dos compartilhamentos do servidor (o ERP
+//       costuma rodar de \\SERVIDOR\ERP), e os atalhos do
+//       ERP na Área de Trabalho/Menu Iniciar — com o servidor citado neles;
 //   (2) os servidores da rede: os citados no .ini, nas unidades mapeadas e nos
 //       atalhos (pelo NOME, que não muda quando o IP muda), o configurado, o
 //       nome "SERVIDOR" e os achados na varredura (LAN, Tailscale, cabo direto);
@@ -1035,8 +1036,8 @@ async function autoDetectarBanco() {
     let localAtivo = false;
     try { localAtivo = await _portaAberta("127.0.0.1", PORTA_FB, 800); } catch (_) {}
 
-    // Pistas da rede: unidades mapeadas (ex.: H: → \\SERVIDOR\SmallSoft) e
-    // atalhos do Small Commerce (ex.: \\SERVIDOR\SmallSoft\Small Commerce\...).
+    // Pistas da rede: unidades mapeadas (ex.: H: → \\SERVIDOR\ERP) e
+    // atalhos do ERP (ex.: \\SERVIDOR\ERP\...).
     let unidRede = [];
     try { unidRede = await _unidadesDeRede(); } catch (_) {}
     let atalhos = { hosts: [], pastas: [] };
@@ -1046,22 +1047,22 @@ async function autoDetectarBanco() {
     unidRede.forEach(u => addHostRede(_hostDeUnc(u.unc)));
     atalhos.hosts.forEach(addHostRede);
     if (unidRede.length) logTs("Busca: unidades de rede: " + unidRede.map(u => u.letra + " = " + u.unc).join(" | "));
-    if (atalhos.pastas.length) logTs("Busca: atalhos do Small Commerce apontam para: " + atalhos.pastas.join(" | "));
+    if (atalhos.pastas.length) logTs("Busca: atalhos do ERP apontam para: " + atalhos.pastas.join(" | "));
     const pastasRede = [];
     const sub = ["", "\\SmallSoft\\Small Commerce", "\\Small Commerce", "\\SmallSoft", "\\Program Files (x86)\\SmallSoft\\Small Commerce"];
     unidRede.forEach(u => sub.forEach(s => { pastasRede.push(u.letra + (s || "\\")); if (u.unc) pastasRede.push(u.unc + s); }));
     atalhos.pastas.forEach(p => pastasRede.push(p));
     hostsRede.concat(["SERVIDOR"]).forEach(h => ["\\SmallSoft\\Small Commerce", "\\Small Commerce", "\\SmallSoft"].forEach(s => pastasRede.push("\\\\" + h + s)));
 
-    // Disco desta máquina (uma vez): SMALL.FDB + pastas do Small com .ini.
+    // Disco desta máquina (uma vez): SMALL.FDB + pastas do ERP com .ini.
     const pastasIni = [];
     let noDisco = [];
     try {
-        logTs("Busca: procurando a configura\u00e7\u00e3o do Small Commerce nesta m\u00e1quina e na rede...");
+        logTs("Busca: procurando a configura\u00e7\u00e3o do ERP nesta m\u00e1quina e na rede...");
         noDisco = await _buscarArquivosFdbLocais(await _unidadesLocaisSeguras(), { comDetalhes: true, pastasIni });
     } catch (_) {}
 
-    // (1) Configuração do próprio Small Commerce.
+    // (1) Configuração do próprio ERP.
     let ini = { bancos: [], hosts: [], deHost: [] };
     const hostDaPasta = p => {
         const s = String(p || "");
@@ -1069,7 +1070,7 @@ async function autoDetectarBanco() {
         const u = unidRede.find(x => s.toUpperCase().startsWith(x.letra));
         return u ? _hostDeUnc(u.unc) : null;
     };
-    try { ini = await _lerInisSmallCommerce(pastasIni.concat(pastasRede), hostDaPasta); } catch (_) {}
+    try { ini = await _lerInisDoErp(pastasIni.concat(pastasRede), hostDaPasta); } catch (_) {}
     ini.hosts.forEach(addHostRede);
     {
         const combos = [];
@@ -1082,7 +1083,7 @@ async function autoDetectarBanco() {
             for (const h of hostsRede) adicionar(combos, h, b.caminho);
         }
         if (combos.length) {
-            logTs("Busca: testando o banco indicado pela configura\u00e7\u00e3o do Small Commerce: " +
+            logTs("Busca: testando o banco indicado pela configura\u00e7\u00e3o do ERP: " +
                   combos.slice(0, 3).map(c => c.host + ":" + c.caminho).join(" | ") + (combos.length > 3 ? " ..." : ""));
             await tentar(combos, 90000);
         }
@@ -1133,10 +1134,10 @@ async function autoDetectarBanco() {
         } else if (servidorFora) {
             logTs("AVISO busca: o servidor " + hostAtual + " n\u00e3o respondeu na porta " + PORTA_FB +
                   " e o SMALL.FDB n\u00e3o foi encontrado em outro servidor da rede nem nesta m\u00e1quina. Verifique se o " +
-                  "servidor do Small Commerce est\u00e1 ligado e acess\u00edvel por esta m\u00e1quina (mesma rede, cabo ou VPN).");
+                  "servidor do ERP est\u00e1 ligado e acess\u00edvel por esta m\u00e1quina (mesma rede, cabo ou VPN).");
         } else {
-            logTs("AVISO busca: n\u00e3o encontrei o SMALL.FDB do Small Commerce na rede nem nesta m\u00e1quina. " +
-                  "Verifique se o servidor do Small Commerce est\u00e1 ligado e acess\u00edvel por esta m\u00e1quina.");
+            logTs("AVISO busca: n\u00e3o encontrei o SMALL.FDB do ERP na rede nem nesta m\u00e1quina. " +
+                  "Verifique se o servidor do ERP est\u00e1 ligado e acess\u00edvel por esta m\u00e1quina.");
         }
         return;
     }
@@ -1485,8 +1486,8 @@ async function detectarTabelaProduto(db) {
     const tabelasUsuario = await listarTabelas(db);
     logTs("Tabelas no banco (" + tabelasUsuario.length + "): " + tabelasUsuario.join(", "));
 
-    // Candidatos em ordem de prioridade (nomes comuns no SmallSoft/SmallCommerce)
-    // ESTOQUE é o nome padrão da tabela de produtos no SmallSoft Small Commerce
+    // Candidatos em ordem de prioridade (nomes comuns no ERP)
+    // ESTOQUE é o nome padrão da tabela de produtos no ERP
     const candidatos = [
         "ESTOQUE", "PRODUTO", "PRODUTOS", "CADPRODUTO", "CADPROD", "CADASTROPRODUTO",
         "CADESTOQUE", "CADEST",
@@ -1642,7 +1643,7 @@ function reordenarFila() {
 //   _aplicarResultadoCarga.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Candidatos por papel, em ordem de prioridade (SmallSoft/SmallCommerce primeiro).
+// Candidatos por papel, em ordem de prioridade (ERP primeiro).
 const COLUNAS_CANDIDATAS = Object.freeze({
     cod:   ["CODIGO", "CODPRODUTO", "ID", "COD"],
     desc:  ["DESCRICAO", "DESCR", "NOME"],
@@ -1652,7 +1653,7 @@ const COLUNAS_CANDIDATAS = Object.freeze({
             "QT", "QUANTIDADE", "QUANTIDADEATU", "QTREAL", "ESTOQUEREAL", "ESTOQUEEFETIVO"],
     bar:   ["CODBARRAS", "EAN", "BARRAS", "CODBARRA", "CODEAN", "BARCODE", "EAN13", "REFERENCIA"],
     prc:   ["PRECO", "PRECO1", "PVENDA", "PRECOVENDA", "PRECO_VENDA", "VAL_VEND", "PRECOUNIT", "PRECOUNITARIO"],
-    // Custo de compra (Modo Automático "Custo de compra"): no Small Commerce é CUSTOCOMPR.
+    // Custo de compra (Modo Automático "Custo de compra"): no ERP é CUSTOCOMPR.
     cst:   ["CUSTOCOMPR", "CUSTO_COMPRA", "CUSTOCOMPRA", "PRECO_CUSTO", "PRECOCUSTO", "PCUSTO", "VALORCUSTO", "CUSTOMEDIO", "CUSTO_MEDIO", "CUSTO"],
     ultV:  ["ULT_VENDA", "ULTVENDA", "ULTIMAVENDA", "ULTIMA_VENDA", "DTVENDA", "DT_VENDA", "ULTIMOSAIDA", "ULTIMA_SAIDA"],
     ativo: ["ATIVO", "ATIVADO", "SITUACAO", "STATUS"]
@@ -2725,7 +2726,7 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
         <div class="cfg-grid-1">
           <div class="cfg-field">
             <label class="cfg-lbl" for="cfgFdbPath">Caminho do arquivo .FDB no servidor</label>
-            <input class="cfg-inp" id="cfgFdbPath" type="text" placeholder="C:\\Program Files (x86)\\SmallSoft\\Small Commerce\\SMALL.FDB" spellcheck="false" autocomplete="off">
+            <input class="cfg-inp" id="cfgFdbPath" type="text" placeholder="C:\\Dados\\SMALL.FDB" spellcheck="false" autocomplete="off">
           </div>
         </div>
         <div class="cfg-grid">
@@ -5292,7 +5293,7 @@ function _modalCustoAcimaPreco(it, qtdOutros, depois) {
     linhaGrid('Margem atual (vende com prejuízo)', pct(margem), true);
 
     var dica = document.createElement('div'); dica.className = 'cst-dica';
-    dica.textContent = 'Normalmente é preço desatualizado ou custo lançado errado no Small Commerce. ' +
+    dica.textContent = 'Normalmente é preço desatualizado ou custo lançado errado no ERP. ' +
         'Vale conferir o cadastro do produto.';
 
     var fechado = false;
@@ -5321,7 +5322,7 @@ function _modalCustoAcimaPreco(it, qtdOutros, depois) {
         return g;
     }
     var bRecomendado = botao('Até a correção do preço',
-        'Fica de fora até o preço (ou o custo) ser corrigido no Small Commerce; depois volta sozinho.',
+        'Fica de fora até o preço (ou o custo) ser corrigido no ERP; depois volta sozinho.',
         'btn btn-p btn-sm', 'ignorar', 'corrigir');
     var gIgnorar = grupo('Excluir o produto da composição (recomendado)',
         'A linha é recalculada sem este produto. Em “Até a correção do preço”, ele é reincluído automaticamente quando o preço for corrigido.',
