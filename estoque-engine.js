@@ -3,16 +3,12 @@
  *
  * @author Ruda Gabriel
  *
- * @version 1.8.0
+ * @version 1.9.0
  * @changelog
- *   1.8.0 - 2026-10-09 - Estoque mínimo com regra única em todos os modos:
- *     depois do uso o estoque nunca fica abaixo do mínimo (mesma lógica do
- *     estoque de parada). Antes, Agrupar e o modo padrão aceitavam item com
- *     estoque IGUAL ao mínimo (que ficava 1 abaixo), enquanto Combinar e
- *     "Reaproveitar código" o recusavam. Ex.: mínimo 5 → estoque 5 não é
- *     usado, estoque 6 libera 1 unidade, estoque 5,5 não é usado.
- *     encontrarGruposAsync e _validarResultadoPadrao passam a usar
- *     _qtdMaximaDisponivel / _grupoRespeitaLimites com piso = mínimo.
+ *   1.9.0 - 2026-11-12 - Correção de texto no Combinar: o contador mostrava
+ *     "20 combinaçãoões encontradas"; agora "1 combinação encontrada" ou
+ *     "20 combinações encontradas".
+ * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * ARQUITETURA:
  *   - UMD wrapper: expõe via module.exports (Node) ou window globals (browser)
@@ -839,7 +835,7 @@
             if (gen && minhaGen !== null && gen.valor - 1 !== minhaGen) return;
             if (onStatus) {
                 var n = resultados.length;
-                onStatus(n ? n + " combinação" + (n > 1 ? "ões" : "") + " encontrada" + (n > 1 ? "s" : "") : "");
+                onStatus(n === 1 ? "1 combinação encontrada" : (n > 1 ? n + " combinações encontradas" : ""));
             }
             if (onDone) onDone(resultados);
         }

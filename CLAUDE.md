@@ -15,6 +15,8 @@
   - textos e validações da tela que precisam bater com o servidor (ex.: faixas de porta).
 
   Conferir cada afirmação contra o código, nunca de memória.
+- **Ortografia e linguagem formal (sempre conferir):** a cada mudança, e sempre que mexer no projeto, revisar a ortografia, a acentuação, a concordância e o plural de todo texto visível: tela, títulos, botões, dicas (`title`), placeholders, mensagens, avisos, log, README, CHANGELOG e mensagens de commit e PR. A linguagem deve ser formal e clara; o que estiver informal ou errado é reescrito. Atenção especial a textos montados no código (ex.: plural com `n === 1 ? ... : ...`, nunca "palavra" + "ões"). Conferir os textos na página renderizada (Playwright), não só no código.
+- **Textos que não podem quebrar o layout:** botões e rótulos de uma linha usam reticências (`text-overflow:ellipsis`, `white-space:nowrap`) com o texto completo no `title`, em vez de quebrar a linha ou empurrar o botão para outra linha. Testar em larguras diferentes (ex.: 1600, 1280, 1100 e 600 px).
 - **Changelog:** o cabeçalho de cada arquivo traz só a entrada da versão atual, mais a linha "Histórico completo das versões: CHANGELOG.md no repositório.". O histórico completo fica no `CHANGELOG.md`: nova entrada no topo da seção do arquivo e versão atualizada na lista "Arquivos". Toda mudança de código sobe a versão do arquivo.
 - **README sempre atualizado:** toda mudança que o usuário perceba atualiza o `README.md` no mesmo PR. Escrito para quem não é técnico.
 - **Exemplos neutros:** placeholders, testes e documentação sem nomes de pessoas, clientes, lojas ou marcas (ex.: "PRODUTO CARO", "FORNECEDOR A", "SERVIDOR").
