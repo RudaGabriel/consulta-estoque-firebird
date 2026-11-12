@@ -5,11 +5,11 @@
  *
  * @author Ruda Gabriel
  *
- * @version 2.13.0
+ * @version 2.14.0
  * @changelog
- *   2.13.0 - 2026-11-10 - Testes do custo de compra (5.54): coluna CUSTOCOMPR
- *     detectada, CUSTO nas duas consultas (NULL sem a coluna), custo
- *     arredondado no item e na lista personalizada. 136 testes.
+ *   2.14.0 - 2026-11-12 - Títulos de testes sem nomes de terceiros (agora
+ *     "ERP"). Caminhos usados como dados de teste continuam iguais. 136 testes.
+ * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * EXECUÇÃO:
  *   node --test consulta-estoque_test.js
@@ -1098,7 +1098,7 @@ describe("descoberta: servidor fora do ar e cópias de backup", () => {
     });
 });
 
-describe("descoberta 5.51: .ini do Small Commerce, pasta de instalação e caminhos", () => {
+describe("descoberta 5.51: .ini do ERP, pasta de instalação e caminhos", () => {
     const srvMod = require("./consulta-estoque.js");
 
     test("_extrairBancosDeIni lê caminho puro, host:caminho, host/porta:caminho e chave Servidor=", () => {
@@ -1203,7 +1203,7 @@ describe("descoberta 5.52: rede primeiro e só SMALL.FDB", () => {
 describe("5.54: custo de compra para o Modo Automático", () => {
     const srv = require("./consulta-estoque.js");
 
-    test("_mapearColunas acha o custo de compra (CUSTOCOMPR do Small Commerce)", () => {
+    test("_mapearColunas acha o custo de compra (coluna CUSTOCOMPR)", () => {
         const cols = srv._mapearColunas(new Set(["CODIGO", "DESCRICAO", "QTD_ATUAL", "PRECO", "CUSTOCOMPR", "CUSTOMEDIO"]));
         assert.equal(cols.cst, "CUSTOCOMPR", "CUSTOCOMPR tem prioridade sobre o custo médio");
         assert.equal(srv._mapearColunas(new Set(["CODIGO", "DESCRICAO", "QTD_ATUAL"])).cst, null);

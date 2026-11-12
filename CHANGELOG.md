@@ -9,10 +9,10 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.59.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.60.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.31.0**.
-- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.13.0**.
+- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.14.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
 - [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.2**.
 - [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. **Removido**.
@@ -24,6 +24,16 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.60.0 (2026-11-12)
+
+```text
+Projeto neutro: saem os nomes de terceiros (fabricante e produto do ERP) dos
+textos da tela, do log, dos comentários, do README e do CHANGELOG — agora
+"ERP". Exemplo do caminho do banco nas Configurações: C:\Dados\SMALL.FDB.
+Ficam só os nomes de pasta e de arquivo que a busca automática do banco
+precisa para funcionar.
+```
 
 ### 5.59.0 (2026-11-12)
 
@@ -66,7 +76,7 @@ de venda":
     e margem atual.
   - Deixar o produto de fora: Só nesta consulta, Hoje ou Até o preço ser
     corrigido (recomendado: volta sozinho quando o preço for acertado no
-    Small Commerce; substitui o antigo "daqui em diante").
+    ERP; substitui o antigo "daqui em diante").
   - Usar o produto mesmo assim: Só nesta consulta ou Sempre (não pergunta
     mais enquanto custo e preço forem os mesmos; se mudarem, volta a avisar).
   - Caixa "Fazer o mesmo com os outros produtos" na mesma situação.
@@ -101,7 +111,7 @@ Modo Automático:
     10002 (R$20,02)". Itens sem custo ficam de fora; o motor de combinação
     (Agrupar/Combinar, estoque mínimo, lista personalizada, reaproveitamento)
     funciona igual. A escolha fica guardada no navegador.
-  - O servidor lê o custo de compra (CUSTOCOMPR no Small Commerce, ou
+  - O servidor lê o custo de compra (CUSTOCOMPR no ERP, ou
     CUSTO_COMPRA/PRECO_CUSTO/CUSTOMEDIO...) e o envia à tela.
   - Com resultado, a tela rola até o botão "Copiar resultado".
 ```
@@ -124,8 +134,8 @@ Busca automática do banco: REDE PRIMEIRO e só SMALL.FDB.
   - O Firebird desta máquina (127.0.0.1) virou a ÚLTIMA opção; os IPs e o
     nome desta máquina nunca contam como "servidor da rede".
   - Novas pistas do servidor: unidades de rede mapeadas (ex.: H: →
-    \\SERVIDOR\SmallSoft), .ini/.cfg lidos nos compartilhamentos
-    (\\SERVIDOR\SmallSoft\Small Commerce), atalhos do Small Commerce na
+    \\SERVIDOR\ERP), .ini/.cfg lidos nos compartilhamentos
+    (\\SERVIDOR\ERP), atalhos do ERP na
     Área de Trabalho/Menu Iniciar e o nome "SERVIDOR". O servidor é gravado
     pelo NOME (não muda quando o IP muda).
   - Banco local adotado sozinho por versão anterior: ao iniciar, procura de
@@ -139,12 +149,12 @@ Busca automática do banco: REDE PRIMEIRO e só SMALL.FDB.
 A descoberta passa a SOBRESCREVER a configuração
   quando o banco configurado falha (antes mantinha um host errado, como um
   192.168.1.50 que não era o servidor). Ordem da busca:
-  [1] A configuração do próprio Small Commerce: lê os .ini das pastas de
-      instalação (C: a H:) e das pastas "Small..." achadas no disco, nos
+  [1] A configuração do próprio ERP: lê os .ini das pastas de
+      instalação (C: a H:) e das pastas do ERP achadas no disco, nos
       formatos "C:\pasta\SMALL.FDB", "servidor:C:\..." e chaves
       Servidor=/Host=/IP=.
   [2] O Firebird desta máquina: .FDB do disco, com a pasta de instalação
-      ("Small Commerce", "SmallSoft") antes de cópias soltas e, depois, o
+      do ERP antes de cópias soltas e, depois, o
       mais recente; e muitos caminhos típicos.
   [3] O servidor configurado e os servidores da rede — agora incluindo a
       rede 169.254 (PCs ligados direto por cabo), com prioridade mais
@@ -175,16 +185,16 @@ Descoberta do banco mais segura e rápida:
 
 ```text
 Descoberta automática do banco: o sistema acha
-  sozinho ONDE está o banco do Small Commerce (servidor + caminho do .FDB)
+  sozinho ONDE está o banco do ERP (servidor + caminho do .FDB)
   e conecta, sem editar nada. Quando o banco configurado não abre:
   [1] Firebird desta máquina ativo: procura arquivos .FDB no disco (todas
       as unidades, com limite de profundidade e tempo; SMALL.FDB primeiro,
       depois o modificado mais recentemente) e tenta caminhos conhecidos.
   [2] Servidor configurado (remoto): tenta outros caminhos conhecidos e
-      aliases do Firebird (SMALL, SMALLCOMMERCE).
+      aliases do Firebird do ERP.
   [3] Rede: varre TODAS as placas úteis (LAN, depois Tailscale), ignorando
       endereços link-local 169.254 (APIPA) — antes pegava a primeira placa.
-  Só adota um banco que ABRE e tem a tabela de produtos do Small Commerce
+  Só adota um banco que ABRE e tem a tabela de produtos do ERP
   (nunca security3.fdb, employee.fdb ou outro banco qualquer). Grava host
   e caminho no config.json. Se o banco existe mas a senha não confere,
   avisa. Para travar o host e desligar a correção, "fbHostFixo": true.
@@ -826,6 +836,13 @@ Passa a rodar as verificacoes de integridade
 ## consulta-estoque_test.js
 
 _Suíte de testes_
+
+### 2.14.0 (2026-11-12)
+
+```text
+Títulos de testes sem nomes de terceiros (agora "ERP"). Os caminhos usados
+como dados de teste da busca automática continuam iguais. 136 testes.
+```
 
 ### 2.13.0 (2026-11-10)
 
