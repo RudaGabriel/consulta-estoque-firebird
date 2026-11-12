@@ -5,18 +5,15 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.58.0
+ * @version 5.59.0
  * @changelog
- *   5.58.0 - 2026-11-12 - Correção: "Reaproveitar código" ficava travado
- *     (apagado e sem responder) ao reabrir o Modo Automático quando a lista
- *     personalizada tinha sido ativada antes. A trava agora fica numa função
- *     única (_sincronizarReaproveitar), chamada em toda mudança da lista
- *     personalizada, inclusive ao abrir o Modo Automático e ao cancelar o
- *     modal da lista.
+ *   5.59.0 - 2026-11-12 - Projeto autônomo: saem as menções a outros
+ *     projetos (cabeçalho e comentários). Rodapé da página com os créditos:
+ *     "Consulta Estoque — desenvolvido por Ruda Gabriel".
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
- * NÃO depende de gerar-relatorio-html.js nem servidor-relatorio.js.
+ * Projeto autônomo: não depende de nenhum outro programa ou projeto.
  * Lê config.json apenas para: fbHost, fdbPath, proibidos, appName.
  * Porta padrão: 7888 (configurável via config.json → portaEstoque)
  *
@@ -1395,7 +1392,7 @@ function salvarListaPersonalizadaDisco() { _gravadorLista.agendar(); }
 carregarListaPersonalizada();
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DECODER WINDOWS-1252 (igual ao gerar-relatorio-html.js)
+// DECODER WINDOWS-1252
 // ─────────────────────────────────────────────────────────────────────────────
 let _decoder = null;
 try { _decoder = new TextDecoder("windows-1252"); } catch (_) {}
@@ -1552,7 +1549,6 @@ async function detectarTabelaProduto(db) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // toISO — normaliza campo de data do Firebird para YYYY-MM-DD
-// (mesma implementação do gerar-relatorio-html.js)
 // ─────────────────────────────────────────────────────────────────────────────
 function toISO(val) {
     if (!val) return null;
@@ -2158,6 +2154,8 @@ th.th-desc {padding: 0 11px;}
      position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
 .hdr-title{font-size:15px;font-weight:700;color:var(--acc)}
 .hdr-sub{font-size:11px;color:var(--txt2);margin-top:2px}
+.credito{text-align:center;font-size:11px;color:var(--txt2);padding:14px 16px 18px}
+.credito b{color:var(--txt)}
 .hdr-r{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
 
 /* ─ BADGES ──────────────────────────────────────────────────────────────── */
@@ -2935,6 +2933,9 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
     </div>
   </div>
 </div>
+
+<!-- CRÉDITOS -->
+<footer class="credito">Consulta Estoque &mdash; desenvolvido por <b>Ruda Gabriel</b></footer>
 
 <!-- VOLTAR AO TOPO -->
 <button class="btn-top" id="btnTopo" onclick="voltarAoTopo()" title="Voltar ao topo" aria-label="Voltar ao topo">

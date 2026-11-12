@@ -1,12 +1,10 @@
 # Consulta Estoque FDB
 
-> Desenvolvido por **Ruda Gabriel**
+> **Autor: Ruda Gabriel** — idealização, desenvolvimento e manutenção. Projeto autônomo e independente.
 
 Sistema web local para **consultar o estoque disponível** de um ERP **SmallSoft / Small Commerce** (banco **Firebird `.FDB`**) e **montar combinações de produtos que somam um valor em reais**, com controle de itens já usados.
 
 Ele roda num PC da loja e é acessado pelo navegador, nessa máquina ou em qualquer outra da mesma rede. **Nunca escreve no banco do ERP:** só lê.
-
-> Procurando um aplicativo de Windows só para **consultar preço e estoque** com leitor de código de barras? Use o projeto dedicado **[consulta-estoque-desktop](https://github.com/RudaGabriel/consulta-estoque-desktop)**. O executável (`.exe`) deste projeto foi descontinuado.
 
 ---
 
@@ -299,6 +297,14 @@ O histórico completo de cada arquivo está em [`CHANGELOG.md`](CHANGELOG.md). D
 
 ## Créditos
 
-**Ruda Gabriel**: idealização, desenvolvimento e manutenção do projeto.
+| | |
+|---|---|
+| **Autor** | **Ruda Gabriel** |
+| **Papel** | Idealização, desenvolvimento e manutenção do projeto |
+| **GitHub** | [@RudaGabriel](https://github.com/RudaGabriel) |
+
+O nome do autor aparece também no rodapé da página do sistema, no cabeçalho de cada arquivo (`@author Ruda Gabriel`) e no `CHANGELOG.md`.
+
+Este é um projeto **autônomo**: não depende de nenhum outro projeto ou programa do autor. Só lê o banco Firebird do ERP.
 
 © Ruda Gabriel. Todos os direitos reservados.
