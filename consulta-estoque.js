@@ -5,14 +5,14 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.57.0
+ * @version 5.58.0
  * @changelog
- *   5.57.0 - 2026-11-11 - Modo custo: nomes formais no aviso de custo
- *     superior ao preço de venda — "Excluir o produto da composição"
- *     (Somente nesta consulta / Até o fim do dia / Até a correção do preço),
- *     "Manter o produto na composição" (Somente nesta consulta / Até
- *     alteração de custo ou preço), "Aplicar a mesma decisão aos demais
- *     produtos" e área "Decisões registradas" com "Revogar"/"Revogar todas".
+ *   5.58.0 - 2026-11-12 - Correção: "Reaproveitar código" ficava travado
+ *     (apagado e sem responder) ao reabrir o Modo Automático quando a lista
+ *     personalizada tinha sido ativada antes. A trava agora fica numa função
+ *     única (_sincronizarReaproveitar), chamada em toda mudança da lista
+ *     personalizada, inclusive ao abrir o Modo Automático e ao cancelar o
+ *     modal da lista.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
@@ -4748,6 +4748,9 @@ function abrirModoAuto() {
     if (chkLp) chkLp.checked = false;
     var lblLp = document.getElementById('lpToggleLbl');
     if (lblLp) lblLp.textContent = 'Usar lista personalizada';
+    // A lista acabou de ser desligada direto no DOM: libera o "Reaproveitar
+    // código" (antes ficava travado se a lista estava ativa na abertura anterior).
+    _sincronizarReaproveitar();
     _atualizarResumoLp();
     _atualizarInfoDecisoesCusto();
     _autoCodsParaMarcar = [];
@@ -5062,10 +5065,23 @@ function toggleListaPersonalizada() {
     // personalizada já tem reaproveitamento nativo (com estoque de parada
     // por código), então o toggle fica desabilitado e visualmente apagado
     // enquanto ela estiver ativa.
-    var chkReap = document.getElementById('chkReaproveitarPadrao');
+    _sincronizarReaproveitar();
+}
+
+// Único ponto que habilita/desabilita o "Reaproveitar código": fica travado
+// só enquanto a lista personalizada estiver ATIVA (ela tem reaproveitamento
+// próprio). Chamado em toda mudança da lista, inclusive as feitas direto no
+// DOM (abrir o Modo Automático, cancelar o modal da lista).
+function _sincronizarReaproveitar() {
+    var chkLp    = document.getElementById('chkListaPersonalizada');
+    var chkReap  = document.getElementById('chkReaproveitarPadrao');
     var wrapReap = document.getElementById('reaproveitarToggleWrap');
-    if (chkReap) chkReap.disabled = ativo;
-    if (wrapReap) wrapReap.style.opacity = ativo ? '0.45' : '';
+    var travar   = !!(chkLp && chkLp.checked);
+    if (chkReap)  chkReap.disabled = travar;
+    if (wrapReap) {
+        wrapReap.style.opacity = travar ? '0.45' : '';
+        wrapReap.style.cursor  = travar ? 'not-allowed' : '';
+    }
 }
 
 // ── Preferência "Reaproveitar código" (modo padrão) — persistida no localStorage,
@@ -5080,6 +5096,7 @@ function _restaurarPrefReaproveitar() {
     var chk = document.getElementById('chkReaproveitarPadrao');
     if (!chk) return;
     try { chk.checked = localStorage.getItem('est-reaproveitar-padrao') === '1'; } catch (_) {}
+    _sincronizarReaproveitar();
     _restaurarPrefBaseAuto();
 }
 
@@ -5378,10 +5395,7 @@ function fecharListaPersonalizadaModal() {
             // código" ficava travado desabilitado mesmo depois da lista
             // personalizada voltar a ficar inativa (o usuário cancelando o modal
             // sem salvar nunca re-habilitava o checkbox). Re-sincroniza aqui.
-            var chkReap  = document.getElementById('chkReaproveitarPadrao');
-            var wrapReap = document.getElementById('reaproveitarToggleWrap');
-            if (chkReap)  chkReap.disabled = false;
-            if (wrapReap) wrapReap.style.opacity = '';
+            _sincronizarReaproveitar();
         }
     }
 }

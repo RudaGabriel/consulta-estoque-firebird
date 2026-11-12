@@ -98,7 +98,7 @@ O custo de compra é lido da coluna `CUSTOCOMPR` do Small Commerce (ou equivalen
 
 Opções:
 
-- **Reaproveitar código:** permite repetir o mesmo código em linhas diferentes, até o limite do estoque.
+- **Reaproveitar código:** permite repetir o mesmo código em linhas diferentes, até o limite do estoque. Fica indisponível (apagado) só enquanto **Usar lista personalizada** estiver ligado, porque a lista já reaproveita os códigos dela.
 - **Usar lista personalizada:** restringe a busca aos códigos que você cadastrou (veja abaixo).
 
 ---

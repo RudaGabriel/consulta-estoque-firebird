@@ -9,7 +9,7 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.57.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.58.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.31.0**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.13.0**.
@@ -24,6 +24,15 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.58.0 (2026-11-12)
+
+```text
+Correção: "Reaproveitar código" ficava travado (apagado e sem responder) ao
+reabrir o Modo Automático quando a lista personalizada tinha sido ativada
+antes. Agora ele só fica travado enquanto a lista personalizada estiver
+ligada.
+```
 
 ### 5.57.0 (2026-11-11)
 
