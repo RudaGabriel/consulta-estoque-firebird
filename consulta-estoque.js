@@ -5,12 +5,14 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.60.0
+ * @version 5.61.0
  * @changelog
- *   5.60.0 - 2026-11-12 - Projeto neutro: saem os nomes de terceiros dos
- *     textos da tela, do log e dos comentários (agora "ERP"); exemplo do
- *     caminho do banco nas Configurações: C:\Dados\SMALL.FDB. Ficam só os
- *     nomes de pasta/arquivo que a busca automática do banco precisa.
+ *   5.61.0 - 2026-11-12 - Revisão de informações desatualizadas:
+ *     - Configurações: a tela aceitava portas só até 65534 e a do Firebird só
+ *       a partir de 1024; agora bate com o servidor (Firebird 1–65535, HTTP
+ *       1024–65535).
+ *     - Comentário da detecção do banco atualizado (rede primeiro, Firebird
+ *       desta máquina por último) e sem referência a outro projeto.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
@@ -392,9 +394,11 @@ const DEFAULTS = Object.freeze({
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DETECÇÃO DO FDB
-// Prioridade: (1) FDB local no disco, (2) config.json, (3) scan de rede na
-// subnet local pela porta Firebird (3050) — resultado é salvo no config.json
-// para que o próximo startup não precise escanear novamente.
+// A rede vem primeiro: (1) configuração do próprio ERP (.ini e atalhos, desta
+// máquina e da rede), (2) servidores da rede (nome, configurado, "SERVIDOR" e
+// varredura pela porta 3050), (3) só por último o Firebird desta máquina.
+// O resultado é salvo no config.json para o próximo início ser direto.
+// Detalhes em autoDetectarBanco() mais abaixo.
 // ─────────────────────────────────────────────────────────────────────────────
 const net = require("net");
 
@@ -1412,7 +1416,7 @@ function decodRow(row) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// QUERY COM ISOLATION_READ_UNCOMMITTED (mesma estratégia do projeto)
+// QUERY COM ISOLATION_READ_UNCOMMITTED (sempre desfeita com rollback)
 // ─────────────────────────────────────────────────────────────────────────────
 function query(db, sql, params, ms) {
     return new Promise(resolve => {
@@ -2720,7 +2724,7 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
           </div>
           <div class="cfg-field">
             <label class="cfg-lbl" for="cfgFbPort">Porta Firebird</label>
-            <input class="cfg-inp" id="cfgFbPort" type="number" placeholder="3050" min="1" max="65534" style="font-family:inherit">
+            <input class="cfg-inp" id="cfgFbPort" type="number" placeholder="3050" min="1" max="65535" style="font-family:inherit">
           </div>
         </div>
         <div class="cfg-grid-1">
@@ -2754,7 +2758,7 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
         <div class="cfg-grid">
           <div class="cfg-field">
             <label class="cfg-lbl" for="cfgPorta" title="Porta HTTP">Porta HTTP</label>
-            <input class="cfg-inp" id="cfgPorta" type="number" placeholder="7888" min="1024" max="65534" style="font-family:inherit">
+            <input class="cfg-inp" id="cfgPorta" type="number" placeholder="7888" min="1024" max="65535" style="font-family:inherit">
             <span class="cfg-hint">Padr&atilde;o: 7888 &middot; requer reinicializa&ccedil;&atilde;o</span>
           </div>
           <div class="cfg-field">
@@ -6939,13 +6943,14 @@ function salvarConfigs() {
     var maxItensVal = maxItensRaw !== '' && maxItensRaw != null ? parseInt(maxItensRaw, 10) : 2000;
 
     // Valida portas no cliente antes de enviar
-    if (isNaN(fbPortVal)  || fbPortVal  < 1024 || fbPortVal  > 65534) {
-        if (st) { st.textContent = 'Porta Firebird inv\u00e1lida (1024\u201365534).'; st.className = 'cfg-status er'; }
+    // Mesmas faixas do servidor (_portaValida): Firebird 1–65535, HTTP 1024–65535.
+    if (isNaN(fbPortVal)  || fbPortVal  < 1 || fbPortVal  > 65535) {
+        if (st) { st.textContent = 'Porta Firebird inv\u00e1lida (1\u201365535).'; st.className = 'cfg-status er'; }
         if (btn) btn.disabled = false;
         return;
     }
-    if (isNaN(httpPortVal) || httpPortVal < 1024 || httpPortVal > 65534) {
-        if (st) { st.textContent = 'Porta HTTP inv\u00e1lida (1024\u201365534).'; st.className = 'cfg-status er'; }
+    if (isNaN(httpPortVal) || httpPortVal < 1024 || httpPortVal > 65535) {
+        if (st) { st.textContent = 'Porta HTTP inv\u00e1lida (1024\u201365535).'; st.className = 'cfg-status er'; }
         if (btn) btn.disabled = false;
         return;
     }

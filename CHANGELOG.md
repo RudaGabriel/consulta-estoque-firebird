@@ -9,7 +9,7 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.60.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.61.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.31.0**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.14.0**.
@@ -24,6 +24,22 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.61.0 (2026-11-12)
+
+```text
+Revisão de informações desatualizadas:
+  - Configurações: a tela aceitava portas só até 65534 e a do Firebird só a
+    partir de 1024; agora bate com o servidor (Firebird 1–65535, HTTP
+    1024–65535).
+  - Comentário da detecção do banco atualizado (rede primeiro, Firebird desta
+    máquina por último).
+  - README: ordem de busca do banco (rede primeiro), "porta em uso" (o .bat
+    encerra sozinho o servidor antigo), faixa da porta do Firebird e
+    quantidade de testes (136).
+  - Novo CLAUDE.md com as regras do projeto, incluindo conferir sempre as
+    informações desatualizadas.
+```
 
 ### 5.60.0 (2026-11-12)
 
