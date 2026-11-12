@@ -1,6 +1,6 @@
 # Changelog
 
-> Desenvolvido por **Ruda Gabriel**
+> **Autor: Ruda Gabriel** — idealização, desenvolvimento e manutenção.
 
 Histórico completo de versões de cada arquivo do projeto, da mais recente para a mais antiga.
 Dentro dos arquivos, o cabeçalho traz **apenas o changelog da versão atual**; o histórico fica só aqui.
@@ -9,13 +9,13 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.58.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.59.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.31.0**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.13.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
-- [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.1**.
-- [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. **Removido** (o aplicativo para Windows agora é o [consulta-estoque-desktop](https://github.com/RudaGabriel/consulta-estoque-desktop)).
+- [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.2**.
+- [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. **Removido**.
 - [`executavel/gerar-executavel.bat`](#executavelgerar-executavelbat): Gera os executáveis com dois cliques. **Removido**.
 - [`executavel/consola.js`](#executavelconsolajs): Painel do executável (menu e modo sempre ativo). **Removido**.
 
@@ -24,6 +24,15 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.59.0 (2026-11-12)
+
+```text
+Projeto autônomo: saem as menções a outros projetos (cabeçalho, comentários,
+README e CHANGELOG). Créditos explícitos: rodapé da página com
+"Consulta Estoque — desenvolvido por Ruda Gabriel" e seção de créditos do
+README com autor, papel e perfil do GitHub.
+```
 
 ### 5.58.0 (2026-11-12)
 
@@ -100,8 +109,7 @@ Modo Automático:
 ### 5.53.0 (2026-11-10)
 
 ```text
-Modo executável (.exe) removido: o aplicativo para Windows agora é o
-  projeto dedicado consulta-estoque-desktop. Saem o painel/menu no console,
+Modo executável (.exe) removido do projeto. Saem o painel/menu no console,
   o modo sempre ativo (guardião), a janela de aplicativo do Edge/Chrome, o
   log em arquivo do .exe e a detecção do Node SEA. O servidor continua igual
   pelo consulta-estoque.bat.
@@ -598,7 +606,7 @@ Coluna "Cód. Barras" também copia, e a lógica de
     copiaria apenas o lote já rolado.
 
   * Servidor de relatório de estoque disponível (Firebird + Node.js).
-NÃO depende de gerar-relatorio-html.js nem servidor-relatorio.js.
+Projeto autônomo: não depende de nenhum outro programa ou projeto.
 Lê config.json apenas para: fbHost, fdbPath, proibidos, appName.
 Porta padrão: 7888 (configurável via config.json → portaEstoque)
 ```
@@ -946,13 +954,20 @@ Primeira versão. Valida a sintaxe do JavaScript
 
 _Instalador avulso do Node.js e do node-firebird_
 
+### 1.1.2 (2026-11-12)
+
+```text
+Título padrão da janela corrigido para "Consulta Estoque". Sem menções a
+outros projetos no cabeçalho.
+```
+
 ### 1.1.1 (2026-08-08 05:10)
 
 ```text
 Quebras de linha convertidas para
  CRLF, a convencao correta do Windows. Estes arquivos estavam com LF
  puro; funcionavam porque so' usam "goto", mas "call :label" quebra
- nesse formato (ver instalar-na-inicializacao.bat v1.8.1). Padronizado
+ nesse formato. Padronizado
  em todo o projeto para evitar a armadilha em edicoes futuras.
  Se for editar, use um editor que preserve CRLF.
 ```
@@ -966,9 +981,8 @@ _Gerador do executável único para Windows_
 ### Removido (2026-11-10)
 
 ```text
-Removido junto com o executável: o aplicativo para Windows agora é o projeto
-  dedicado consulta-estoque-desktop. Também saiu o workflow
-  .github/workflows/gerar-executavel.yml.
+Removido junto com o executável (fora do escopo deste projeto). Também saiu
+  o workflow .github/workflows/gerar-executavel.yml.
 ```
 
 ### 1.0.0 (2026-11-09)
@@ -991,9 +1005,8 @@ _Gera os executáveis com dois cliques_
 ### Removido (2026-11-10)
 
 ```text
-Removido junto com o executável: o aplicativo para Windows agora é o projeto
-  dedicado consulta-estoque-desktop. Também saiu o workflow
-  .github/workflows/gerar-executavel.yml.
+Removido junto com o executável (fora do escopo deste projeto). Também saiu
+  o workflow .github/workflows/gerar-executavel.yml.
 ```
 
 ### 1.0.0 (2026-11-09)
@@ -1015,9 +1028,8 @@ _Painel do executável (menu e modo sempre ativo)_
 ### Removido (2026-11-10)
 
 ```text
-Removido junto com o executável: o aplicativo para Windows agora é o projeto
-  dedicado consulta-estoque-desktop. Também saiu o workflow
-  .github/workflows/gerar-executavel.yml.
+Removido junto com o executável (fora do escopo deste projeto). Também saiu
+  o workflow .github/workflows/gerar-executavel.yml.
 ```
 
 ### 1.0.0 (2026-11-09)
