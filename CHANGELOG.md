@@ -9,8 +9,8 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.61.0**.
-- [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.8.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.62.0**.
+- [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.9.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.31.0**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.14.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
@@ -24,6 +24,24 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.62.0 (2026-11-12)
+
+```text
+Textos e layout:
+  - Combinar: "20 combinaçãoões encontradas" corrigido para "20 combinações
+    encontradas" (motor 1.9.0).
+  - "Limpar itens usados" não vai mais para uma linha sozinho: o botão ocupa
+    o espaço que sobra na barra de filtros e, se faltar espaço, o texto
+    encolhe com reticências (texto completo na dica). A caixa "Mostrando
+    preços de" começa menor e cresce só se sobrar espaço; o rótulo não quebra
+    mais em duas linhas.
+  - Ortografia e linguagem formal: "Estoque Disponível" (título e aba),
+    "códigos de barras", "Combinações que somam R$ ...", "ITEM ESPECÍFICO",
+    "acrescido de 10%", "Usa o preço de venda (padrão)".
+  - CLAUDE.md: novas regras de ortografia e linguagem formal e de textos que
+    não podem quebrar o layout.
+```
 
 ### 5.61.0 (2026-11-12)
 
@@ -664,6 +682,14 @@ BUG REAL corrigido: alerta "código não existe
 ## estoque-engine.js
 
 _Motor de cálculo (Agrupar, Combinar, Modo Automático)_
+
+### 1.9.0 (2026-11-12)
+
+```text
+Correção de texto no Combinar: o contador mostrava "20 combinaçãoões
+encontradas"; agora "1 combinação encontrada" ou "20 combinações
+encontradas".
+```
 
 ### 1.8.0 (2026-10-09)
 

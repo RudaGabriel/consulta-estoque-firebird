@@ -54,7 +54,7 @@ Ele roda num PC da loja e é acessado pelo navegador, nessa máquina ou em qualq
 | **Copiar coluna** | Um clique no cabeçalho **Código** ou **Cód. Barras** copia todos os valores do filtro atual, não só as linhas visíveis. |
 | **Itens exibidos** | Limite de linhas na tabela. A tabela é desenhada aos poucos, conforme a rolagem, para não travar com milhares de itens. |
 | **Atualizar** | Recarrega o estoque do banco na hora. |
-| **Limpar usados** | Devolve todos os itens usados para o início da fila. |
+| **Limpar itens usados** | Devolve todos os itens usados para o início da fila. Em telas estreitas, o texto do botão encolhe com reticências em vez de quebrar a barra. |
 | **Configurações (⚙)** | Host, porta, caminho do `.FDB`, usuário e senha do Firebird, porta HTTP, nome da aplicação, estoque mínimo, máximo de itens e palavras proibidas. Quase tudo é aplicado sem reiniciar o servidor. |
 
 ---
