@@ -31,7 +31,7 @@ Ele roda num PC da loja e é acessado pelo navegador, nessa máquina ou em qualq
 
 ## O que o sistema faz
 
-1. **Conecta no Firebird** do ERP. Ele encontra o banco sozinho: procura o `SMALL.FDB` local, lê o `.ini` do ERP, usa o `config.json` ou, em último caso, varre a rede local pela porta 3050.
+1. **Conecta no Firebird** do ERP. Ele encontra o banco sozinho, **sempre pela rede primeiro**: usa o `config.json`, lê os `.ini` e atalhos do ERP, procura o servidor da rede (pelo nome e pela varredura da porta 3050) e, **só por último**, o Firebird desta máquina. Detalhes em [Como o estoque é lido do banco](#como-o-estoque-é-lido-do-banco).
 2. **Detecta a tabela de produtos** e as colunas de código, descrição, estoque, código de barras, preço, última venda e situação (ativo/inativo), sem precisar configurar nomes de colunas.
 3. **Lista só os itens com estoque real (> 0)**, sem os inativos e sem os termos **proibidos** que você configurar (marcas, categorias ou itens que não devem ser sugeridos).
 4. **Monta combinações de produtos** que somam um valor-alvo. Isso serve para fechar valores de cartão, crédito, PIX ou entregas com itens que realmente existem em estoque.
@@ -124,7 +124,7 @@ Opções:
 - **Somente leitura:** as consultas usam transações `READ UNCOMMITTED`, que são sempre desfeitas (rollback) no final, sem bloquear o ERP.
 - **Itens exibidos:** estoque **> 0** (arredondado em 3 casas), descrição preenchida, código único, sem proibidos e sem inativos.
 - **Inativos:** a coluna `ATIVO`/`ATIVADO`/`SITUACAO`/`STATUS` é comparada com `N`, `I`, `X` e `F`. Qualquer outro valor conta como ativo.
-- **Banco encontrado automaticamente:** se o banco configurado não abrir, o sistema procura sozinho onde ele está e **atualiza a configuração**. A meta é ler o banco **pela rede**: (1) a configuração do próprio ERP (`.ini`/`.cfg` desta máquina, das unidades de rede mapeadas e do compartilhamento `\\SERVIDOR\ERP`, e os atalhos do Small na Área de Trabalho/Menu Iniciar); (2) os servidores da rede, pelo nome (que não muda quando o IP muda), o configurado, o nome `SERVIDOR` e a varredura (LAN, Tailscale e cabo direto `169.254`), testando caminhos nas unidades `C:` a `H:`; (3) **só por último** o Firebird desta máquina (`127.0.0.1`). Só aceita arquivos chamados `SMALL.FDB` e só conecta num banco que abre **e** tem a tabela de produtos do ERP. O `.FDB` nunca é aberto por compartilhamento (só o `.ini` é lido). Para travar o host, use `"fbHostFixo": true`.
+- **Banco encontrado automaticamente:** se o banco configurado não abrir, o sistema procura sozinho onde ele está e **atualiza a configuração**. A meta é ler o banco **pela rede**: (1) a configuração do próprio ERP (`.ini`/`.cfg` desta máquina, das unidades de rede mapeadas e do compartilhamento `\\SERVIDOR\ERP`, e os atalhos do ERP na Área de Trabalho/Menu Iniciar); (2) os servidores da rede, pelo nome (que não muda quando o IP muda), o configurado, o nome `SERVIDOR` e a varredura (LAN, Tailscale e cabo direto `169.254`), testando caminhos nas unidades `C:` a `H:`; (3) **só por último** o Firebird desta máquina (`127.0.0.1`). Só aceita arquivos chamados `SMALL.FDB` e só conecta num banco que abre **e** tem a tabela de produtos do ERP. O `.FDB` nunca é aberto por compartilhamento (só o `.ini` é lido). Para travar o host, use `"fbHostFixo": true`.
 - **Estoque mínimo:** os itens acima do mínimo vêm primeiro. Se faltar item para completar a lista, entram os que estão abaixo do mínimo, mas nunca os zerados.
 - **Proibidos:** no padrão de fábrica a lista vem **vazia**. Cadastre os termos da sua loja em **Configurações > Palavras Proibidas** (ou na chave `proibidos` do `config.json`). A comparação é por trecho da descrição, sem diferenciar maiúsculas e minúsculas. O campo aceita um termo por linha; se você colar a lista separada por vírgula, ponto e vírgula, `|` ou como JSON, ela é **convertida automaticamente** (maiúsculas, sem repetidos). Vírgula entre números, como em `1,5KG`, é mantida.
 - **Proteções:** cada carga tem tempo máximo de 60 s. Duas cargas nunca rodam ao mesmo tempo. Pedidos feitos durante uma carga ficam na fila e rodam assim que ela termina.
@@ -190,7 +190,7 @@ O arquivo é **opcional**: sem ele, o sistema detecta o banco sozinho. Quase tod
 |---|---|---|
 | `appName` | `Consulta Estoque` | Nome exibido na interface (mudar exige reiniciar). |
 | `fbHost` | detectado | IP ou nome do servidor Firebird. A busca automática procura **primeiro o servidor da rede** (pelas unidades mapeadas, pelos `.ini` e atalhos do ERP, pelo nome `SERVIDOR` e pela varredura da rede) e só por último o Firebird desta máquina (`127.0.0.1`). |
-| `fbPort` | `3050` | Porta do Firebird. |
+| `fbPort` | `3050` | Porta do Firebird, de 1 a 65535. |
 | `fdbPath` | detectado | Caminho do `SMALL.FDB` **no servidor do banco**. A busca automática só aceita arquivos chamados `SMALL.FDB`. |
 | `fbHostFixo` | `false` | `true` impede a busca automática de trocar o servidor e o caminho configurados. |
 | `fbUser` / `fbPassword` | `SYSDBA` / padrão de instalação | Credenciais do Firebird. Sem senha configurada, o log mostra um aviso de segurança. |
@@ -217,6 +217,7 @@ Arquivos com BOM ou com números escritos com zero à esquerda (ex.: `03050`) s�
 | `node-firebird.bat` | Instalador avulso do Node.js e do `node-firebird`. |
 | `consulta-estoque_test.js` | Suíte de testes do motor e do servidor. |
 | `validar-client.js` | Valida a sintaxe do JavaScript da interface, que fica dentro de uma string do servidor. |
+| `CLAUDE.md` | Regras do projeto para manutenção com o Claude (idioma, créditos, neutralidade, conferência de informações desatualizadas). |
 
 ---
 
@@ -265,7 +266,7 @@ node validar-client.js             # sintaxe do JavaScript da interface
 node --test consulta-estoque_test.js
 ```
 
-A suíte cobre o motor de cálculo e o servidor. No servidor, testa a leitura da configuração, a lista personalizada, o SQL gerado, o processamento do estoque e a carga com um **Firebird simulado**. Ela **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
+A suíte tem **136 testes** e cobre o motor de cálculo e o servidor. No servidor, testa a leitura da configuração, a lista personalizada, o SQL gerado, o processamento do estoque e a carga com um **Firebird simulado**. Ela **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
 
 ---
 
@@ -283,7 +284,7 @@ A suíte cobre o motor de cálculo e o servidor. No servidor, testa a leitura da
 |---|---|
 | "Falha na conexão" | `fbHost`, `fbPort`, `fdbPath`, usuário e senha nas Configurações; firewall liberando a porta 3050. |
 | "Timeout ao carregar dados" | Banco ou rede lentos. O servidor tenta de novo quando você clica em **Atualizar**. |
-| "Porta 7888 já está em uso" | Um servidor antigo continua aberto. O `.bat` oferece encerrá-lo; ou mude `portaEstoque`. |
+| "Porta 7888 já está em uso" | Se for um servidor antigo deste sistema, o `.bat` encerra sozinho, sem perder dados. Se for outro programa, mude `portaEstoque`. |
 | Nenhum item aparece | Veja no log a linha `Colunas:`, que mostra a tabela e as colunas detectadas. |
 | Clicar na janela do `.bat` trava o sistema | Já resolvido: o `.bat` desativa o "Modo de Edição Rápida" do console. |
 
