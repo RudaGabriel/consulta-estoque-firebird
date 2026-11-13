@@ -4,19 +4,19 @@ cd /d "%~dp0"
 chcp 65001 >nul 2>&1
 
 :: =========================================================
-::  node-firebird.bat                                  v1.1.2
+::  node-firebird.bat                                  v1.1.3
 ::  Autor: Ruda Gabriel
 ::  - Verifica / instala Node.js automaticamente
 ::  - Instala o modulo node-firebird via npm
 ::  - Pula instalacao se modulo ja estiver presente
 ::  - Tratamento robusto de erros e atualizacao de PATH
 ::
-::  CHANGELOG 1.1.2 - 2026-11-12 - Titulo padrao da janela corrigido para
-::   "Consulta Estoque". Sem mencoes a outros projetos.
+::  CHANGELOG 1.1.3 - 2026-11-13 - Titulo padrao da janela: "Consulta de
+::   Estoque" (nome formal do sistema).
 ::   Historico completo das versoes: CHANGELOG.md no repositorio.
 
-set "APP_TITULO=Consulta Estoque"
-for /f "usebackq delims=" %%N in (`powershell -NoProfile -Command "try{$n=(Get-Content '%~dp0config.json' -Raw -Encoding UTF8 | ConvertFrom-Json).appName; if($n){$n}else{'Consulta Estoque'}}catch{'Consulta Estoque'}" 2^>nul`) do set "APP_TITULO=%%N"
+set "APP_TITULO=Consulta de Estoque"
+for /f "usebackq delims=" %%N in (`powershell -NoProfile -Command "try{$n=(Get-Content '%~dp0config.json' -Raw -Encoding UTF8 | ConvertFrom-Json).appName; if($n){$n}else{'Consulta de Estoque'}}catch{'Consulta de Estoque'}" 2^>nul`) do set "APP_TITULO=%%N"
 title !APP_TITULO! - Instalador Node-Firebird
 
 echo.

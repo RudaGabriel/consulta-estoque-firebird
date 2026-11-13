@@ -1,4 +1,4 @@
-# Consulta Estoque FDB
+# Consulta de Estoque
 
 > **Autor: Ruda Gabriel** — idealização, desenvolvimento e manutenção. Projeto autônomo e independente.
 
@@ -173,7 +173,7 @@ O arquivo é **opcional**: sem ele, o sistema detecta o banco sozinho. Quase tod
 
 ```json
 {
-  "appName": "Consulta Estoque",
+  "appName": "Consulta de Estoque",
   "fbHost": "192.168.0.10",
   "fbPort": 3050,
   "fdbPath": "C:\\Dados\\SMALL.FDB",
@@ -188,7 +188,7 @@ O arquivo é **opcional**: sem ele, o sistema detecta o banco sozinho. Quase tod
 
 | Campo | Padrão | Descrição |
 |---|---|---|
-| `appName` | `Consulta Estoque` | Nome exibido na interface (mudar exige reiniciar). |
+| `appName` | `Consulta de Estoque` | Nome exibido na interface (mudar exige reiniciar). |
 | `fbHost` | detectado | IP ou nome do servidor Firebird. A busca automática procura **primeiro o servidor da rede** (pelas unidades mapeadas, pelos `.ini` e atalhos do ERP, pelo nome `SERVIDOR` e pela varredura da rede) e só por último o Firebird desta máquina (`127.0.0.1`). |
 | `fbPort` | `3050` | Porta do Firebird, de 1 a 65535. |
 | `fdbPath` | detectado | Caminho do `SMALL.FDB` **no servidor do banco**. A busca automática só aceita arquivos chamados `SMALL.FDB`. |
@@ -201,7 +201,7 @@ O arquivo é **opcional**: sem ele, o sistema detecta o banco sozinho. Quase tod
 
 ### Padrão de fábrica
 
-O código não traz nenhum dado de loja: nome da aplicação genérico (`Consulta Estoque`), host `127.0.0.1` com detecção automática, lista de proibidos vazia e exemplos sem nomes reais. Tudo o que é específico de uma loja fica no `config.json`, nos arquivos gerados em uso e nunca no código. Para **voltar ao padrão de fábrica**, apague `config.json`, `usados-estoque.json` e `lista-personalizada.json` com o servidor parado.
+O código não traz nenhum dado de loja: nome da aplicação genérico (`Consulta de Estoque`), host `127.0.0.1` com detecção automática, lista de proibidos vazia e exemplos sem nomes reais. Tudo o que é específico de uma loja fica no `config.json`, nos arquivos gerados em uso e nunca no código. Para **voltar ao padrão de fábrica**, apague `config.json`, `usados-estoque.json` e `lista-personalizada.json` com o servidor parado.
 
 Arquivos com BOM ou com números escritos com zero à esquerda (ex.: `03050`) são aceitos. Ao salvar, os campos de outros módulos que existirem no arquivo são **preservados**.
 

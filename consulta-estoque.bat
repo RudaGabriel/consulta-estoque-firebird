@@ -2,18 +2,16 @@
 REM ===========================================================================
 REM  consulta-estoque.bat
 REM  @author Ruda Gabriel
-REM  @version 5.31.0
+REM  @version 5.32.0
 REM  @changelog
-REM    5.31.0 - 2026-11-10 - Nenhuma interacao com a janela: verificacao com
-REM      falha segue sozinha em 5 s; servidor antigo na mesma porta e encerrado
-REM      e substituido sem perguntar; servidor que cai reinicia sozinho (ate 5
-REM      vezes seguidas); erros fatais mostram a mensagem e a janela fecha
-REM      sozinha em 60 s (sem "pressione uma tecla").
+REM    5.32.0 - 2026-11-13 - Nome formal do sistema na janela e nas
+REM      mensagens: "Consulta de Estoque".
+REM  Historico completo das versoes: CHANGELOG.md no repositorio.
 REM
 REM  Mantenha este arquivo com quebras de linha CRLF ("call :rotina" falha com LF).
 REM ===========================================================================
 chcp 65001 > nul
-title Consulta Estoque
+title Consulta de Estoque
 
 cd /d "%~dp0"
 
@@ -215,7 +213,7 @@ REM ---------------------------------------------------------------------------
 REM Iniciar servidor (visivel nesta janela) e aguardar a tecla 0
 REM ---------------------------------------------------------------------------
 :iniciar_servidor
-title Consulta Estoque - porta %PORTA% - pressione 0 para encerrar tudo
+title Consulta de Estoque - porta %PORTA% - pressione 0 para encerrar tudo
 
 REM Desativa o QuickEdit desta janela: um clique no console iniciava uma
 REM selecao que CONGELAVA a saida do Node (e o servidor). Falha e ignorada.
@@ -275,7 +273,7 @@ REM Servidor caiu: reinicia sozinho (ate 5 vezes seguidas, 5 s entre elas). A
 REM contagem zera quando o servidor fica de pe por ~1 minuto (20 voltas de 3 s).
 :servidor_caiu
 del "%ESTOQUE_PIDFILE%" > nul 2>&1
-REM Outra janela do Consulta Estoque assumiu a porta (o .bat foi aberto de novo
+REM Outra janela do Consulta de Estoque assumiu a porta (o .bat foi aberto de novo
 REM e substituiu este servidor): esta janela so avisa e fecha, sem disputar.
 set "OUTRO_PID="
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr /r /c:":%PORTA% .*LISTENING" /c:":%PORTA% .*OUVINDO"') do set "OUTRO_PID=%%p"
@@ -283,7 +281,7 @@ if defined OUTRO_PID (
     tasklist /fi "PID eq %OUTRO_PID%" /fo csv /nh 2>nul | find /i "node.exe" > nul
     if not errorlevel 1 (
         echo.
-        echo  Outra janela do Consulta Estoque assumiu o servidor na porta %PORTA%.
+        echo  Outra janela do Consulta de Estoque assumiu o servidor na porta %PORTA%.
         call :fechar_em 10
         exit /b 0
     )
