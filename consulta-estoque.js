@@ -5,19 +5,11 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.62.0
+ * @version 5.63.0
  * @changelog
- *   5.62.0 - 2026-11-12 - Textos e layout:
- *     - Combinar: "20 combinaçãoões encontradas" corrigido para "20
- *       combinações encontradas" (motor 1.9.0).
- *     - "Limpar itens usados" não vai mais para uma linha sozinho: o botão
- *       ocupa o espaço que sobra na barra de filtros e, se faltar espaço, o
- *       texto encolhe com reticências (texto completo na dica). A caixa
- *       "Mostrando preços de" começa menor e cresce só se sobrar espaço; o
- *       rótulo não quebra mais em duas linhas.
- *     - Ortografia e linguagem formal: "Estoque Disponível" (título e aba),
- *       "códigos de barras", "Combinações que somam R$ ...", "ITEM
- *       ESPECÍFICO", "acrescido de 10%", "Usa o preço de venda (padrão)".
+ *   5.63.0 - 2026-11-13 - Nome formal do sistema: "Consulta de Estoque"
+ *     (nome padrão da aplicação, exemplo nas Configurações e rodapé). Quem já
+ *     definiu "appName" no config.json continua com o nome escolhido.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
@@ -328,7 +320,7 @@ let cfg = {};
 
 const APP_NAME  = (cfg.appName && String(cfg.appName).trim())
     ? String(cfg.appName).trim()
-    : "Consulta Estoque";
+    : "Consulta de Estoque";
 
 // Proibidos embutidos: VAZIO no padrão de fábrica. Termos proibidos são
 // configuração de cada loja e ficam em config.json ("proibidos"), editáveis
@@ -392,7 +384,7 @@ const DEFAULTS = Object.freeze({
     fbUser:        "SYSDBA",
     fbPassword:    "masterkey",
     portaEstoque:  7888,
-    appName:       "Consulta Estoque",
+    appName:       "Consulta de Estoque",
     estoqueMinimo: 5,
     maxItens:      MAX_ITENS
 });
@@ -2792,7 +2784,7 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
           </div>
           <div class="cfg-field">
             <label class="cfg-lbl" for="cfgAppName" title="Nome da aplica&ccedil;&atilde;o">Nome da aplica&ccedil;&atilde;o</label>
-            <input class="cfg-inp" id="cfgAppName" type="text" placeholder="Consulta Estoque">
+            <input class="cfg-inp" id="cfgAppName" type="text" placeholder="Consulta de Estoque">
             <span class="cfg-hint">Requer reinicializa&ccedil;&atilde;o</span>
           </div>
         </div>
@@ -2959,7 +2951,7 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
 </div>
 
 <!-- CRÉDITOS -->
-<footer class="credito">Consulta Estoque &mdash; desenvolvido por <b>Ruda Gabriel</b></footer>
+<footer class="credito">Consulta de Estoque &mdash; desenvolvido por <b>Ruda Gabriel</b></footer>
 
 <!-- VOLTAR AO TOPO -->
 <button class="btn-top" id="btnTopo" onclick="voltarAoTopo()" title="Voltar ao topo" aria-label="Voltar ao topo">

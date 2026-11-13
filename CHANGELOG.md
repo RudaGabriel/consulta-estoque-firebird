@@ -9,12 +9,12 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.62.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.63.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.9.0**.
-- [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.31.0**.
+- [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.32.0**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.14.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
-- [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.2**.
+- [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.3**.
 - [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. **Removido**.
 - [`executavel/gerar-executavel.bat`](#executavelgerar-executavelbat): Gera os executáveis com dois cliques. **Removido**.
 - [`executavel/consola.js`](#executavelconsolajs): Painel do executável (menu e modo sempre ativo). **Removido**.
@@ -24,6 +24,14 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.63.0 (2026-11-13)
+
+```text
+Nome formal do sistema: "Consulta de Estoque" (nome padrão da aplicação,
+exemplo nas Configurações, rodapé da página e título do README). Quem já
+definiu "appName" no config.json continua com o nome escolhido.
+```
 
 ### 5.62.0 (2026-11-12)
 
@@ -804,6 +812,12 @@ Modo Agrupar (encontrarGruposAsync) não funcionava
 
 _Inicializador para Windows_
 
+### 5.32.0 (2026-11-13)
+
+```text
+Nome formal do sistema na janela e nas mensagens: "Consulta de Estoque".
+```
+
 ### 5.31.0 (2026-11-10)
 
 ```text
@@ -1012,6 +1026,12 @@ Primeira versão. Valida a sintaxe do JavaScript
 ## node-firebird.bat
 
 _Instalador avulso do Node.js e do node-firebird_
+
+### 1.1.3 (2026-11-13)
+
+```text
+Título padrão da janela: "Consulta de Estoque" (nome formal do sistema).
+```
 
 ### 1.1.2 (2026-11-12)
 
