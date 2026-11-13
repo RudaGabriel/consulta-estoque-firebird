@@ -5,11 +5,12 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.63.0
+ * @version 5.64.0
  * @changelog
- *   5.63.0 - 2026-11-13 - Nome formal do sistema: "Consulta de Estoque"
- *     (nome padrão da aplicação, exemplo nas Configurações e rodapé). Quem já
- *     definiu "appName" no config.json continua com o nome escolhido.
+ *   5.64.0 - 2026-11-13 - Barra de filtros: sem filtro, as áreas da caixa
+ *     "Mostrando preços de" e do botão "Limpar filtros" deixavam um espaço
+ *     vazio entre "Combinar" e "Itens exibidos". Agora elas somem junto com
+ *     a caixa e o botão e só ocupam espaço quando aparecem.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
@@ -2235,11 +2236,17 @@ textarea.busca-multi-ta:focus{border-color:var(--acc)}
 #prcHint{flex-shrink:40}
 /* Base de 170px (cresce até 320px se sobrar espaço): assim a quebra de linha
    da barra considera a caixa menor e o botão "Limpar itens usados" cabe. */
-#prcBoxWrap{flex:1 1 170px;min-width:0;max-width:320px}
+#prcBoxWrap{display:none}
+/* Só ocupa espaço na barra quando a caixa está visível (com valor digitado);
+   escondida, não deixa um vão entre "Combinar" e "Itens exibidos". */
+#prcBoxWrap.vis{display:flex;flex:1 1 170px;min-width:0;max-width:320px}
 
 /* ─ BOTÃO LIMPAR FILTROS — só aparece quando há filtro ativo ──────────────── */
 #btnLimparFiltros{display:none}
 #btnLimparFiltros.vis{display:inline-flex}
+/* A área do botão também some, para não sobrar espaço vazio na barra */
+#btnLimparFiltrosWrap{display:none}
+#btnLimparFiltrosWrap.vis{display:flex}
 .prc-range{color:var(--grn);font-weight:700;flex-shrink:0;white-space:nowrap}
 .prc-hint{font-size:10px;color:var(--txt2);font-style:italic;
           flex-shrink:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
@@ -2670,7 +2677,7 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
     </div>
   </div>
 
-  <div class="cg">
+  <div class="cg" id="btnLimparFiltrosWrap">
     <label class="cl">&nbsp;</label>
     <button class="btn btn-s btn-sm" id="btnLimparFiltros" onclick="limparFiltros()"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px"><path d="M3 3l10 10M13 3 3 13"/></svg>Limpar filtros</button>
   </div>
@@ -3669,8 +3676,11 @@ function atualizarPrcBox(val) {
     var rng  = document.getElementById('prcRange');
     var hint = document.getElementById('prcHint');
     if (!box) return;
-    if (!val || val <= 0) { box.classList.remove('vis'); return; }
-    box.classList.add('vis');
+    var wrapBox = document.getElementById('prcBoxWrap');
+    var mostrar = !!val && val > 0;
+    box.classList.toggle('vis', mostrar);
+    if (wrapBox) wrapBox.classList.toggle('vis', mostrar);
+    if (!mostrar) return;
     var hintTexto;
     if (combinarAtivo()) {
         if (rng) rng.textContent = 'Combinar: R$ ' + val.toFixed(2).replace('.', ',');
@@ -3690,6 +3700,8 @@ function _atualizarBtnLimparFiltros(busca, temPrc, temMulti) {
     if (!btn) return;
     var temFiltro = !!busca || !!temPrc || !!temMulti;
     btn.classList.toggle('vis', temFiltro);
+    var wrapBtn = document.getElementById('btnLimparFiltrosWrap');
+    if (wrapBtn) wrapBtn.classList.toggle('vis', temFiltro);
 }
 
 // ── Filtrar ───────────────────────────────────────────────────────────────────
@@ -4018,6 +4030,8 @@ function limparFiltros() {
     if (bm) bm.value = "";
     if (p) p.value = "";
     if (x) x.classList.remove("vis");
+    var xw = document.getElementById("prcBoxWrap");
+    if (xw) xw.classList.remove("vis");
     // Cancela qualquer busca exaustiva pendente/em andamento (item, grupo ou multi)
     clearTimeout(_buscaRestanteTimer.item);
     clearTimeout(_buscaRestanteTimer.grupo);
