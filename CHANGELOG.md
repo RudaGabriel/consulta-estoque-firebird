@@ -9,7 +9,7 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.63.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.64.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.9.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.32.0**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.14.0**.
@@ -24,6 +24,15 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.64.0 (2026-11-13)
+
+```text
+Barra de filtros: sem filtro, as áreas da caixa "Mostrando preços de" e do
+botão "Limpar filtros" deixavam um espaço vazio entre "Combinar" e "Itens
+exibidos". Agora elas somem junto com a caixa e o botão e só ocupam espaço
+quando aparecem.
+```
 
 ### 5.63.0 (2026-11-13)
 
