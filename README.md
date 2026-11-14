@@ -46,9 +46,9 @@ Ele roda num PC da loja e é acessado pelo navegador, nessa máquina ou em qualq
 |---|---|
 | **Busca** | Por descrição, código ou código de barras (EAN). Aceita filtros de estoque: `>200`, `<10`, e combinados com texto, como `produto>10`. |
 | **Busca personalizada** | Vários termos de uma vez (um por linha ou separados por vírgula). Mostra quais termos não encontraram nenhum item. |
-| **Busca por valor (R$)** | Informe um valor para ativar o **Agrupar** ou o **Combinar**. |
+| **Busca por valor (R$)** | A tabela mostra só os itens com o **preço exato** informado, em todos os modos. Ligue o **Agrupar** ou o **Combinar** para ver também as combinações que somam o valor, em painéis acima da tabela. |
 | **Agrupar** | Encontra **pares e trios de itens diferentes** cuja soma fica entre o valor e o valor + R$ 40, respeitando o estoque mínimo. |
-| **Combinar** | Encontra combinações **com repetição do mesmo item** (ex.: `3×08395`), respeitando o estoque disponível. Os itens só são marcados como usados depois que você confirma. |
+| **Combinar** | Encontra combinações **com repetição do mesmo item** (ex.: `3×08395`) cuja soma fica entre o valor e o valor + R$ 40, respeitando o estoque disponível. Os itens só são marcados como usados depois que você confirma. |
 | **Usar** | Copia o código para a área de transferência e marca o item como usado. Antes disso, avisa se o uso deixaria o estoque abaixo do mínimo. |
 | **Ordenação** | Por estoque, preço ou data da última venda, crescente ou decrescente (a escolha fica salva no navegador). |
 | **Copiar coluna** | Um clique no cabeçalho **Código** ou **Cód. Barras** copia todos os valores do filtro atual, não só as linhas visíveis. |
@@ -266,7 +266,7 @@ node validar-client.js             # sintaxe do JavaScript da interface
 node --test consulta-estoque_test.js
 ```
 
-A suíte tem **136 testes** e cobre o motor de cálculo e o servidor. No servidor, testa a leitura da configuração, a lista personalizada, o SQL gerado, o processamento do estoque e a carga com um **Firebird simulado**. Ela **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
+A suíte tem **137 testes** e cobre o motor de cálculo e o servidor. No servidor, testa a leitura da configuração, a lista personalizada, o SQL gerado, o processamento do estoque e a carga com um **Firebird simulado**. Ela **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
 
 ---
 

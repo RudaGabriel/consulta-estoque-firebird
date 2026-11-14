@@ -3,11 +3,13 @@
  *
  * @author Ruda Gabriel
  *
- * @version 1.9.0
+ * @version 1.10.0
  * @changelog
- *   1.9.0 - 2026-11-12 - Correção de texto no Combinar: o contador mostrava
- *     "20 combinaçãoões encontradas"; agora "1 combinação encontrada" ou
- *     "20 combinações encontradas".
+ *   1.10.0 - 2026-11-14 - Combinar: a tolerância anunciada é "até +R$40", mas
+ *     a faixa era somada duas vezes e combinações de até +R$80 apareciam
+ *     (com poucos produtos). Agora a folga extra é só o que passar de
+ *     FAIXA_COMBINAR e há uma trava final: toda combinação fica entre o valor
+ *     e o valor + R$40.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * ARQUITETURA:
@@ -811,8 +813,15 @@
             });
             if (!poolAtual.length) { _entregar(); return; }
 
-            var resultado = _autoEncontrarMelhorComRepeticao(poolAtual, valor, faixaCombinar, usosSimulados, null, estoqueMinimo);
+            // _autoEncontrarMelhorComRepeticao JÁ soma FAIXA_COMBINAR ao alvo; o 3º
+            // parâmetro é só a folga EXTRA. Antes passávamos a faixa inteira aqui,
+            // e o Combinar aceitava até +R$80 (40 + 40) em vez dos +R$40 prometidos.
+            var folgaExtra = Math.max(0, faixaCombinar - FAIXA_COMBINAR);
+            var resultado = _autoEncontrarMelhorComRepeticao(poolAtual, valor, folgaExtra, usosSimulados, null, estoqueMinimo);
             if (!resultado || !resultado.itens || !resultado.itens.length) { _entregar(); return; }
+            // Trava final: nunca abaixo do valor nem acima de valor + faixa.
+            var somaRes = Number(resultado.soma);
+            if (!(somaRes >= valor - FLOAT_EPS && somaRes <= valor + faixaCombinar + FLOAT_EPS)) { _entregar(); return; }
 
             resultado.itens.forEach(function(it) {
                 usosSimulados[it.codigo] = (usosSimulados[it.codigo] || 0) + 1;

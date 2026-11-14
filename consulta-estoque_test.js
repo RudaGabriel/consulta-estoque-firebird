@@ -5,10 +5,10 @@
  *
  * @author Ruda Gabriel
  *
- * @version 2.14.0
+ * @version 2.15.0
  * @changelog
- *   2.14.0 - 2026-11-12 - Títulos de testes sem nomes de terceiros (agora
- *     "ERP"). Caminhos usados como dados de teste continuam iguais. 136 testes.
+ *   2.15.0 - 2026-11-14 - Novo teste: nenhuma combinação do Combinar passa de
+ *     valor + FAIXA_COMBINAR (antes chegava a +R$80). 137 testes.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * EXECUÇÃO:
@@ -378,6 +378,22 @@ describe("encontrarCombinacoesComRepeticaoAsync", () => {
                 done();
             } catch(e) { done(e); }
         }, { estoqueMinimo: 5 });
+    });
+
+    test("nenhuma combinação passa de valor + FAIXA_COMBINAR (antes chegava a +R$80)", (_, done) => {
+        // Poucos produtos e nenhuma soma exata: antes apareciam cards acima de +R$40.
+        const precos = [26.25, 38.22, 52.5, 65.94, 84, 100.59, 115.5, 132.93, 147, 171.78, 189, 209.79, 252, 284.55, 120, 60];
+        const pool = precos.map((p, i) => item("P" + i, p, 50));
+        encontrarCombinacoesComRepeticaoAsync(pool, 200, function(combos) {
+            try {
+                assert.ok(combos.length > 0, "deveria achar ao menos 1 combinação");
+                combos.forEach(c => {
+                    assert.ok(c.soma >= 200 - 0.01, "abaixo do valor: " + c.soma);
+                    assert.ok(c.soma <= 200 + FAIXA_COMBINAR + 0.01, "acima da faixa: " + c.soma);
+                });
+                done();
+            } catch (e) { done(e); }
+        }, { estoqueMinimo: 0 });
     });
 
     test("callback onStatus é chamado durante o cálculo", (_, done) => {
