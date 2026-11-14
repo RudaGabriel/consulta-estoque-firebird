@@ -46,7 +46,7 @@ Ele roda num PC da loja e é acessado pelo navegador, nessa máquina ou em qualq
 |---|---|
 | **Busca** | Por descrição, código ou código de barras (EAN). Aceita filtros de estoque: `>200`, `<10`, e combinados com texto, como `produto>10`. |
 | **Busca personalizada** | Vários termos de uma vez (um por linha ou separados por vírgula). Mostra quais termos não encontraram nenhum item. |
-| **Busca por valor (R$)** | Informe um valor para ativar o **Agrupar** ou o **Combinar**. |
+| **Busca por valor (R$)** | A tabela mostra só os itens com o **preço exato** informado, em todos os modos. Ligue o **Agrupar** ou o **Combinar** para ver também as combinações que somam o valor, em painéis acima da tabela. |
 | **Agrupar** | Encontra **pares e trios de itens diferentes** cuja soma fica entre o valor e o valor + R$ 40, respeitando o estoque mínimo. |
 | **Combinar** | Encontra combinações **com repetição do mesmo item** (ex.: `3×08395`), respeitando o estoque disponível. Os itens só são marcados como usados depois que você confirma. |
 | **Usar** | Copia o código para a área de transferência e marca o item como usado. Antes disso, avisa se o uso deixaria o estoque abaixo do mínimo. |

@@ -5,12 +5,15 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.64.0
+ * @version 5.65.0
  * @changelog
- *   5.64.0 - 2026-11-13 - Barra de filtros: sem filtro, as áreas da caixa
- *     "Mostrando preços de" e do botão "Limpar filtros" deixavam um espaço
- *     vazio entre "Combinar" e "Itens exibidos". Agora elas somem junto com
- *     a caixa e o botão e só ocupam espaço quando aparecem.
+ *   5.65.0 - 2026-11-14 - Combinar: com o Combinar ligado, a tabela ignorava
+ *     o valor procurado e listava todos os itens. Agora ela mostra só os
+ *     itens com o preço exato, como no modo normal e no Agrupar; as
+ *     combinações continuam no painel acima. A barra de status mostra
+ *     "= R$ X (exato)" e "combinação ativa (até +R$40)" (antes "±R$40").
+ *     Ortografia: plurais de "item" montados no código ("1 iten", "2 items", "2 itemns")
+ *     agora saem "1 item"/"2 itens"; "1 item ... foi incluído".
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
@@ -3251,7 +3254,7 @@ function _copiarColunaVisivel(campo, rotuloSingular, rotuloPlural) {
         // toda e só descobrir a diferença depois de colar.
         var faltando = _vis.length - valores.length;
         if (faltando > 0) {
-            msg += ' (' + faltando + ' item' + (faltando > 1 ? 'ns' : '') +
+            msg += ' (' + faltando + ' ' + (faltando === 1 ? 'item' : 'itens') +
                    ' sem ' + rotuloSingular + ' ficou' + (faltando > 1 ? 'ram' : '') + ' de fora.)';
         }
         toast(msg, 3500);
@@ -3422,8 +3425,8 @@ function carregarItens() {
         if (_estMinResp > 0) {
             if (_totalResp < _S.maxItens) {
                 // Não conseguiu completar a lista mesmo com itens abaixo do mínimo
-                var _msgIncompleta = 'Itens insuficientes no banco: apenas ' + _totalResp + ' iten' +
-                    (_totalResp === 1 ? '' : 's') + ' encontrado' + (_totalResp === 1 ? '' : 's') +
+                var _msgIncompleta = 'Itens insuficientes no banco: apenas ' + _totalResp + ' ' +
+                    (_totalResp === 1 ? 'item encontrado' : 'itens encontrados') +
                     ' (estoque mínimo: ' + _estMinResp + ')';
                 if (_nAbaixoResp > 0) {
                     _msgIncompleta += ' — incluindo ' + _nAbaixoResp +
@@ -3433,8 +3436,8 @@ function carregarItens() {
                 toast(_msgIncompleta, 8000);
             } else if (_nAbaixoResp > 0) {
                 // Completou a lista ampliando com itens abaixo do mínimo
-                toast(_nAbaixoResp + ' iten' + (_nAbaixoResp === 1 ? '' : 's') +
-                    ' com estoque abaixo de ' + _estMinResp + ' unid. foram incluídos' +
+                toast(_nAbaixoResp + ' ' + (_nAbaixoResp === 1 ? 'item' : 'itens') +
+                    ' com estoque abaixo de ' + _estMinResp + ' unid. ' + (_nAbaixoResp === 1 ? 'foi inclu\u00eddo' : 'foram inclu\u00eddos') +
                     ' para completar a lista de ' + _S.maxItens + ' itens.', 6000);
             }
         }
@@ -3594,7 +3597,7 @@ function atualizarBadge(dados) {
         el.innerHTML = '<span class="badge b-er">' + _icons.warn + 'Erro de conex\u00e3o</span>';
     } else {
         var n = dados.total || _itens.length;
-        el.innerHTML = '<span class="badge b-ok">' + _icons.ok + n + ' iten' + (n === 1 ? '' : 's') + '</span>';
+        el.innerHTML = '<span class="badge b-ok">' + _icons.ok + n + ' ' + (n === 1 ? 'item' : 'itens') + '</span>';
     }
 }
 
@@ -3602,9 +3605,9 @@ function atualizarBadge(dados) {
 // Sem "Acima": match EXATO no valor (tolerância de 1 centavo para float)
 // Com "Acima" (+R$40): intervalo [valor, valor+40] — quando vazio, busca
 // automaticamente o restante do banco (ver _buscarRestanteSeNecessario)
-// calcFaixa: usado apenas quando combinarAtivo()==false para filtrar a tabela
-// por preço exato. No modo Combinar a tabela NÃO filtra por preço — mostra todos
-// os itens; o resultado vai para o painel "Combinar", não para a tabela.
+// calcFaixa: filtra a tabela pelo preço exato (tolerância de 1 centavo), em
+// todos os modos. Agrupar e Combinar mostram as combinações nos painéis
+// próprios; a tabela continua só com os itens que custam exatamente o valor.
 function calcFaixa(valor) {
     return { min: valor - FLOAT_EPS, max: valor + FLOAT_EPS };
 }
@@ -3796,9 +3799,10 @@ function filtrar() {
 
         var p = Number(it.preco || 0);
         if (p === PRECO_SENTINEL_ZERADO) return false;
-        // No modo Combinar, a tabela não filtra por preço — o preço é usado
-        // pelo painel Combinar. No modo exato (sem Combinar), filtra normalmente.
-        if (temPrc && !combinarAtivo()) {
+        // Com valor informado, a tabela mostra só os itens com o preço EXATO,
+        // em todos os modos (normal, Agrupar e Combinar). As combinações que
+        // somam o valor aparecem nos painéis próprios, acima da tabela.
+        if (temPrc) {
             if (p <= 0) return false;
             if (p < fx.min || p > fx.max) return false;
         }
@@ -3809,8 +3813,7 @@ function filtrar() {
     _ultimoTermosEncontrados = termosEncontrados; // reuso por quem decide estender a busca (evita re-varredura)
 
     // ── Ordenação ─────────────────────────────────────────────────────────────
-    // No modo Combinar, a tabela mostra todos os itens (sem filtrar por preço
-    // — o preço vai pro painel Combinar). Ordenação padrão por coluna.
+    // Ordenação padrão por coluna (usados por último).
     _vis.sort(function(a, b) {
         if (a.usado !== b.usado) return (a.usado ? 1 : 0) - (b.usado ? 1 : 0);
         var va = _chaveOrdenacao(a);
@@ -4277,7 +4280,7 @@ function renderCombinar(combos, valor, usosSimulados) {
                                     return contagemPorCod[cod].qtd + '\u00d7' + cod;
                                 }).join(' ');
                                 _copiarTexto(codsTexto, function() {});
-                                toast('\u2713 ' + n + ' item' + (n === 1 ? '' : 's') +
+                                toast('\u2713 ' + n + ' ' + (n === 1 ? 'item' : 'itens') +
                                     ' marcado' + (n === 1 ? '' : 's') + ' como usado' + (n === 1 ? '' : 's') + '!', 3000);
                                 // Re-executa a busca de combinações com o pool atualizado
                                 filtrar();
@@ -4390,7 +4393,7 @@ function renderGrupos(grupos, valor) {
                     var txt = itens.map(function(it) { return it.codigo || '-'; }).join(' ');
                     _copiarTexto(txt, function() {
                         marcarGrupoUsado(itens, function(n) {
-                            toast('\u2713 C\u00f3digos copiados! ' + n + ' item' + (n===1?'':'s') +
+                            toast('\u2713 C\u00f3digos copiados! ' + n + ' ' + (n === 1 ? 'item' : 'itens') +
                                   ' marcado' + (n===1?'':'s') + ' como usado' + (n===1?'':'s') + '.', 3200);
                         });
                     });
@@ -4406,7 +4409,7 @@ function renderGrupos(grupos, valor) {
                     });
                     _copiarTexto(linhas.join('\\n'), function() {
                         marcarGrupoUsado(itens, function(n) {
-                            toast('\u2713 Informa\u00e7\u00f5es copiadas! ' + n + ' item' + (n===1?'':'s') +
+                            toast('\u2713 Informa\u00e7\u00f5es copiadas! ' + n + ' ' + (n === 1 ? 'item' : 'itens') +
                                   ' marcado' + (n===1?'':'s') + ' como usado' + (n===1?'':'s') + '.', 3200);
                         });
                     });
@@ -4533,19 +4536,15 @@ function renderTabela() {
     var nVis = _vis.length;
     var nUso = _nUsadosVis; // já calculado em filtrar() — sem filter() extra sobre _vis
     if (stats) {
-        var s = "<strong>" + nVis + "</strong> iten" + (nVis === 1 ? "" : "s") + " vis\u00edv" + (nVis === 1 ? "el" : "eis");
+        var s = "<strong>" + nVis + "</strong> " + (nVis === 1 ? "item vis\u00edvel" : "itens vis\u00edveis");
         s += " &nbsp;&bull;&nbsp; <strong>" + _itens.length + "</strong> no banco";
         if (nUso > 0) {
             s += ' &nbsp;&bull;&nbsp; <span style="color:var(--uso-txt)">' + nUso + ' usados</span>';
         }
         if (temPrc) {
-            if (combinarAtivo()) {
-                s += ' &nbsp;&bull;&nbsp; <span style="color:var(--grn)">Combinar R$' + prcN.toFixed(2).replace(".",",") +
-                     ' (\u00b1R$' + FAIXA_COMBINAR + ')</span>';
-            } else {
-                s += ' &nbsp;&bull;&nbsp; <span style="color:var(--grn)">=\u00a0R$' + prcN.toFixed(2).replace(".",",") + ' (exato)</span>';
-            }
+            s += ' &nbsp;&bull;&nbsp; <span style="color:var(--grn)">=\u00a0R$' + prcN.toFixed(2).replace(".",",") + ' (exato)</span>';
             if (gruparAtivo()) s += ' &nbsp;&bull;&nbsp; <span style="color:var(--acc)">agrupamento ativo</span>';
+            if (combinarAtivo()) s += ' &nbsp;&bull;&nbsp; <span style="color:var(--acc)">combina\u00e7\u00e3o ativa (at\u00e9 +R$' + FAIXA_COMBINAR + ')</span>';
         }
         stats.innerHTML = s;
     }
@@ -5661,7 +5660,7 @@ function copiarResultadoAuto() {
             }).then(function(r) {
                 if (r && r.ok) okCount++;
                 if (--pendentes === 0) {
-                    toast('\u2713 ' + okCount + ' item' + (okCount===1?'':'s') + ' movido' + (okCount===1?'':'s') + ' para usados.', 3000);
+                    toast('\u2713 ' + okCount + ' ' + (okCount === 1 ? 'item' : 'itens') + ' movido' + (okCount===1?'':'s') + ' para usados.', 3000);
                     carregarItens();
                 }
             });
@@ -6661,7 +6660,7 @@ function _iniciarModoAutoAposSync(faixaExtraOverride, tentativaExtensaoOverride)
         if (!lpAtiva && naoEncontrados > 0 && _tentativaExtensaoAtual < MAX_TENTATIVAS_EXTENSAO) {
             var _proximaTentativa = _tentativaExtensaoAtual + 1;
             _modalConfirm(
-                naoEncontrados + ' item' + (naoEncontrados === 1 ? '' : 's') +
+                naoEncontrados + ' ' + (naoEncontrados === 1 ? 'item' : 'itens') +
                 ' n\u00e3o encontrado' + (naoEncontrados === 1 ? '' : 's') +
                 ' no cat\u00e1logo carregado.' +
                 '\\n\\nDeseja estender a busca no banco por mais itens correspondentes?' +

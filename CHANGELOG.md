@@ -9,7 +9,7 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.64.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.65.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.9.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.32.0**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.14.0**.
@@ -24,6 +24,19 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.65.0 (2026-11-14)
+
+```text
+Combinar: com o Combinar ligado, a tabela ignorava o valor procurado e
+listava todos os itens. Agora ela mostra só os itens com o preço exato, como
+no modo normal e no Agrupar; as combinações continuam no painel acima. A
+barra de status mostra "= R$ X (exato)" e "combinação ativa (até +R$40)"
+(antes "±R$40"). Ortografia: plurais de
+"item" montados no código ("1 iten", "2 items",
+"2 itemns") agora saem "1 item" e
+"2 itens"; no singular, "1 item ... foi incluído".
+```
 
 ### 5.64.0 (2026-11-13)
 
