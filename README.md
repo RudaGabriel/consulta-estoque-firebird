@@ -286,7 +286,7 @@ A suíte tem **137 testes** e cobre o motor de cálculo e o servidor. No servido
 | "Timeout ao carregar dados" | Banco ou rede lentos. O servidor tenta de novo quando você clica em **Atualizar**. |
 | "Porta 7888 já está em uso" | Se for um servidor antigo deste sistema, o `.bat` encerra sozinho, sem perder dados. Se for outro programa, mude `portaEstoque`. |
 | Nenhum item aparece | Veja no log a linha `Colunas:`, que mostra a tabela e as colunas detectadas. |
-| Clicar na janela do `.bat` trava o sistema | Já resolvido: o `.bat` desativa o "Modo de Edição Rápida" do console. |
+| Clicar na janela do `.bat` trava o sistema | Já resolvido: o `.bat` desativa o "Modo de Edição Rápida" do console logo ao abrir, antes de qualquer verificação. Não é preciso apertar nenhuma tecla em nenhum momento. |
 
 ---
 

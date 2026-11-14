@@ -2,10 +2,12 @@
 REM ===========================================================================
 REM  consulta-estoque.bat
 REM  @author Ruda Gabriel
-REM  @version 5.32.0
+REM  @version 5.33.0
 REM  @changelog
-REM    5.32.0 - 2026-11-13 - Nome formal do sistema na janela e nas
-REM      mensagens: "Consulta de Estoque".
+REM    5.33.0 - 2026-11-14 - A Edicao Rapida (QuickEdit) do console passa a
+REM      ser desativada logo no inicio. Antes so era desativada ao iniciar o
+REM      servidor, e um clique na janela durante as etapas anteriores
+REM      (Node, porta, testes) congelava tudo ate alguem apertar uma tecla.
 REM  Historico completo das versoes: CHANGELOG.md no repositorio.
 REM
 REM  Mantenha este arquivo com quebras de linha CRLF ("call :rotina" falha com LF).
@@ -22,6 +24,15 @@ set "ESTOQUE_BAT=%~f0"
 REM Instancia elevada: quando o .bat se reabre como administrador ele recebe o
 REM argumento /instalar-node e faz SOMENTE a instalacao do Node.js.
 if /i "%~1"=="/instalar-node" goto :modo_instalador
+
+REM Desativa o QuickEdit (Edicao Rapida) desta janela LOGO NO INICIO: com ele
+REM ligado, um clique no console inicia uma selecao que CONGELA a janela ate
+REM alguem apertar uma tecla. Antes isso so era feito ao iniciar o servidor, e
+REM as etapas anteriores (Node, porta, testes) travavam com qualquer clique.
+REM Falha e ignorada (o .bat segue normalmente).
+set "ESTOQUE_ACAO=quickedit"
+call :executar_ps > nul 2>&1
+set "ESTOQUE_ACAO="
 
 echo.
 echo  ================================================
@@ -215,11 +226,8 @@ REM ---------------------------------------------------------------------------
 :iniciar_servidor
 title Consulta de Estoque - porta %PORTA% - pressione 0 para encerrar tudo
 
-REM Desativa o QuickEdit desta janela: um clique no console iniciava uma
-REM selecao que CONGELAVA a saida do Node (e o servidor). Falha e ignorada.
-set "ESTOQUE_ACAO=quickedit"
-call :executar_ps > nul 2>&1
-set "ESTOQUE_ACAO="
+REM O QuickEdit ja foi desativado no inicio do .bat (vale para toda a janela,
+REM inclusive para o servidor e para os reinicios automaticos).
 echo  Iniciando servidor...
 echo  Acesse: http://localhost:%PORTA%
 echo.
