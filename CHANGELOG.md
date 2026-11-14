@@ -11,7 +11,7 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 - [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.65.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.10.0**.
-- [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.32.0**.
+- [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.33.0**.
 - [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.15.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
 - [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.3**.
@@ -844,6 +844,15 @@ Modo Agrupar (encontrarGruposAsync) não funcionava
 ## consulta-estoque.bat
 
 _Inicializador para Windows_
+
+### 5.33.0 (2026-11-14)
+
+```text
+A Edição Rápida (QuickEdit) do console passa a ser desativada logo no
+início. Antes só era desativada ao iniciar o servidor, e um clique na janela
+durante as etapas anteriores (Node, porta, testes) congelava tudo até alguém
+apertar uma tecla.
+```
 
 ### 5.32.0 (2026-11-13)
 
