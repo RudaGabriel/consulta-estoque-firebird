@@ -10,9 +10,9 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## Arquivos
 
 - [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.65.0**.
-- [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.9.0**.
+- [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.10.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.32.0**.
-- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.14.0**.
+- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.15.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
 - [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.3**.
 - [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. **Removido**.
@@ -36,6 +36,8 @@ barra de status mostra "= R$ X (exato)" e "combinação ativa (até +R$40)"
 "item" montados no código ("1 iten", "2 items",
 "2 itemns") agora saem "1 item" e
 "2 itens"; no singular, "1 item ... foi incluído".
+Motor 1.10.0: o Combinar aceitava combinações de até +R$80; agora fica no
+máximo +R$40, como anunciado.
 ```
 
 ### 5.64.0 (2026-11-13)
@@ -713,6 +715,15 @@ BUG REAL corrigido: alerta "código não existe
 
 _Motor de cálculo (Agrupar, Combinar, Modo Automático)_
 
+### 1.10.0 (2026-11-14)
+
+```text
+Combinar: a tolerância anunciada é "até +R$40", mas a faixa era somada duas
+vezes e combinações de até +R$80 apareciam (com poucos produtos). Agora a
+folga extra é só o que passar de FAIXA_COMBINAR e há uma trava final: toda
+combinação fica entre o valor e o valor + R$40.
+```
+
 ### 1.9.0 (2026-11-12)
 
 ```text
@@ -914,6 +925,13 @@ Passa a rodar as verificacoes de integridade
 ## consulta-estoque_test.js
 
 _Suíte de testes_
+
+### 2.15.0 (2026-11-14)
+
+```text
+Novo teste: nenhuma combinação do Combinar passa de valor + FAIXA_COMBINAR
+(antes chegava a +R$80). 137 testes.
+```
 
 ### 2.14.0 (2026-11-12)
 
