@@ -3,13 +3,17 @@
  *
  * @author Ruda Gabriel
  *
- * @version 1.10.0
+ * @version 1.11.0
  * @changelog
- *   1.10.0 - 2026-11-14 - Combinar: a tolerância anunciada é "até +R$40", mas
- *     a faixa era somada duas vezes e combinações de até +R$80 apareciam
- *     (com poucos produtos). Agora a folga extra é só o que passar de
- *     FAIXA_COMBINAR e há uma trava final: toda combinação fica entre o valor
- *     e o valor + R$40.
+ *   1.11.0 - 2026-11-15 - Modo Automático:
+ *     - _dividirPedidosDaLinha: vários pedidos na mesma linha, separados por
+ *       "|" (ex.: "177,00 CREDITO | 23,00 PIX").
+ *     - _separarResultadoDaLinha / _lerGrupoCodigos / _lerTokenCodigo: lê uma
+ *       linha que já traz o resultado de um processamento anterior (códigos
+ *       "3*08395(R$29,70)", com ou sem preço).
+ *     - _conferirGrupoNoEstoque: confere se esses códigos ainda existem e
+ *       cabem no estoque (somando o que as linhas anteriores usaram), sem
+ *       deixar nada negativo.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * ARQUITETURA:
@@ -596,6 +600,135 @@
         }).join(" ");
     }
 
+    // ── Modo Automático: vários pedidos numa linha e linhas já preenchidas ───
+    // Um código na saída: "08395", "3*08395", "08395(R$29,70)" ou
+    // "3*08395(R$29,70)". Só códigos numéricos (é o formato que o sistema gera).
+    var _RE_TOKEN_CODIGO = /^(?:(\d+)\*)?(\d+)(?:\(R\$ ?([0-9][0-9.]*(?:,[0-9]{1,2})?)\))?$/;
+    var _MARCADOR_NAO_ENCONTRADO = "[NAO ENCONTRADO]";
+
+    function _valorMonetario(txt) {
+        var t = String(txt || "");
+        if (t.indexOf(",") !== -1) t = t.split(".").join("").replace(",", ".");
+        var v = parseFloat(t);
+        return Number.isFinite(v) ? v : null;
+    }
+
+    // Lê UM token de código. Retorna { cod, qtd, preco } ou null.
+    function _lerTokenCodigo(tok) {
+        var m = _RE_TOKEN_CODIGO.exec(String(tok || ""));
+        if (!m) return null;
+        var qtd = m[1] ? parseInt(m[1], 10) : 1;
+        if (!Number.isFinite(qtd) || qtd < 1 || qtd > 100000) return null;
+        return { cod: m[2], qtd: qtd, preco: m[3] != null ? _valorMonetario(m[3]) : null };
+    }
+
+    // Lê um grupo de códigos separados por espaço. Todos os tokens precisam ser
+    // códigos; senão retorna null (o texto não é um resultado).
+    function _lerGrupoCodigos(texto) {
+        var toks = String(texto || "").trim().split(/\s+/).filter(function(t) { return t.length > 0; });
+        if (!toks.length) return null;
+        var itens = [];
+        for (var i = 0; i < toks.length; i++) {
+            var it = _lerTokenCodigo(toks[i]);
+            if (!it) return null;
+            itens.push(it);
+        }
+        return itens;
+    }
+
+    // "177,00 CREDITO | 23,00 PIX" → ["177,00 CREDITO", "23,00 PIX"]. Só divide
+    // quando TODAS as partes começam com um número (o valor); senão devolve a
+    // linha inteira, sem mexer (ex.: cabeçalho ou texto livre com "|").
+    function _dividirPedidosDaLinha(linha) {
+        var l = String(linha == null ? "" : linha);
+        if (l.indexOf("|") === -1) return [l];
+        var partes = l.split("|").map(function(p) { return p.trim(); })
+                                  .filter(function(p) { return p.length > 0; });
+        if (partes.length < 2) return [l];
+        for (var i = 0; i < partes.length; i++) {
+            var c = partes[i].charCodeAt(0);
+            if (!(c >= 48 && c <= 57)) return [l];
+        }
+        return partes;
+    }
+
+    // Separa uma linha (um pedido) em: base (valor + forma de pagamento), os
+    // grupos de códigos de um resultado anterior e o marcador [NAO ENCONTRADO].
+    // Com TAB (formato da saída do sistema): cada campo depois do primeiro que
+    // só tenha códigos é um grupo. Sem TAB: os tokens finais só contam como
+    // códigos se algum deles tiver "*" ou "(R$" (evita confundir "3" de uma
+    // descrição com um código).
+    function _separarResultadoDaLinha(linha) {
+        var t = String(linha == null ? "" : linha).replace(/\s+$/, "");
+        var marcador = false;
+        var grupos = [];
+        var base;
+        if (t.indexOf("\t") !== -1) {
+            var campos = t.split("\t");
+            var baseCampos = [campos[0]];
+            for (var i = 1; i < campos.length; i++) {
+                var c = campos[i].trim();
+                if (!c) continue;
+                if (c.toUpperCase() === _MARCADOR_NAO_ENCONTRADO) { marcador = true; continue; }
+                var g = _lerGrupoCodigos(c);
+                if (g) grupos.push({ texto: c.split(/\s+/).join(" "), itens: g });
+                else baseCampos.push(c);
+            }
+            base = baseCampos.join("\t");
+        } else {
+            if (t.toUpperCase().slice(-_MARCADOR_NAO_ENCONTRADO.length) === _MARCADOR_NAO_ENCONTRADO) {
+                marcador = true;
+                t = t.slice(0, -_MARCADOR_NAO_ENCONTRADO.length).replace(/\s+$/, "");
+            }
+            var re = /\S+/g, m, toks = [];
+            while ((m = re.exec(t)) !== null) toks.push({ txt: m[0], pos: m.index });
+            var inicio = toks.length;
+            while (inicio > 1 && _lerTokenCodigo(toks[inicio - 1].txt)) inicio--;
+            var comMarca = false;
+            for (var k = inicio; k < toks.length; k++) {
+                if (toks[k].txt.indexOf("*") !== -1 || toks[k].txt.indexOf("(R$") !== -1) { comMarca = true; break; }
+            }
+            if (inicio < toks.length && comMarca) {
+                var finais = toks.slice(inicio).map(function(x) { return x.txt; });
+                grupos.push({ texto: finais.join(" "), itens: finais.map(_lerTokenCodigo) });
+                base = t.slice(0, toks[inicio].pos).replace(/\s+$/, "");
+            } else {
+                base = t;
+            }
+        }
+        return { base: base, grupos: grupos, marcador: marcador };
+    }
+
+    // Confere se um grupo de códigos ainda cabe no estoque, somando o que as
+    // linhas anteriores já usaram ("usos"). buscarItem(cod) devolve o item do
+    // banco (com .codigo e .estoque) ou null. Piso: estoque de parada do código
+    // (se houver) ou "pisoPadrao" (0 = nunca negativo). Com "valor", confere
+    // também que a soma dos preços informados não ficou abaixo do pedido.
+    // Retorna { ok:true, consumo:[{item, qtd}] } ou { ok:false, motivo, cod }.
+    function _conferirGrupoNoEstoque(grupo, buscarItem, usos, estoqueParadaPorCod, pisoPadrao, valor) {
+        if (!grupo || !grupo.length) return { ok: false, motivo: "vazio", cod: null };
+        var porCod = {}, ordem = [], soma = 0, todosComPreco = true;
+        for (var i = 0; i < grupo.length; i++) {
+            var g = grupo[i];
+            var item = buscarItem ? buscarItem(g.cod) : null;
+            if (!item) return { ok: false, motivo: "inexistente", cod: g.cod };
+            var k = String(item.codigo);
+            if (!porCod[k]) { porCod[k] = { item: item, qtd: 0 }; ordem.push(k); }
+            porCod[k].qtd += g.qtd;
+            if (g.preco == null) todosComPreco = false; else soma += g.preco * g.qtd;
+        }
+        for (var j = 0; j < ordem.length; j++) {
+            var p = porCod[ordem[j]];
+            if (p.qtd > _qtdMaximaDisponivel(p.item, usos || {}, estoqueParadaPorCod || null, pisoPadrao)) {
+                return { ok: false, motivo: "estoque", cod: ordem[j] };
+            }
+        }
+        if (typeof valor === "number" && valor > 0 && todosComPreco && soma < valor - FLOAT_EPS) {
+            return { ok: false, motivo: "soma", cod: null };
+        }
+        return { ok: true, consumo: ordem.map(function(k2) { return porCod[k2]; }) };
+    }
+
     // ── _diffTermosFaltantes ──────────────────────────────────────────────────
     // Subtração O(termos) usando um Set já calculado — evita re-varrer _itens.
     function _diffTermosFaltantes(termos, encontradosSet) {
@@ -932,6 +1065,11 @@
         _itemBateAlgumTermo                : _itemBateAlgumTermo,
         _termosSemMatch                    : _termosSemMatch,
         _normalizarListaProibidos          : _normalizarListaProibidos,
+        _lerTokenCodigo                    : _lerTokenCodigo,
+        _lerGrupoCodigos                   : _lerGrupoCodigos,
+        _dividirPedidosDaLinha             : _dividirPedidosDaLinha,
+        _separarResultadoDaLinha           : _separarResultadoDaLinha,
+        _conferirGrupoNoEstoque            : _conferirGrupoNoEstoque,
         // Funções assíncronas de busca
         encontrarGruposAsync                        : encontrarGruposAsync,
         encontrarCombinacoesComRepeticaoAsync        : encontrarCombinacoesComRepeticaoAsync
