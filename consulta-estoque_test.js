@@ -5,10 +5,11 @@
  *
  * @author Ruda Gabriel
  *
- * @version 2.15.0
+ * @version 2.16.0
  * @changelog
- *   2.15.0 - 2026-11-14 - Novo teste: nenhuma combinação do Combinar passa de
- *     valor + FAIXA_COMBINAR (antes chegava a +R$80). 137 testes.
+ *   2.16.0 - 2026-11-15 - Testes do Modo Automático com linhas já preenchidas
+ *     e vários pedidos por linha ("|"): leitura dos códigos, divisão dos
+ *     pedidos e conferência de estoque. 145 testes.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * EXECUÇÃO:
@@ -403,6 +404,58 @@ describe("encontrarCombinacoesComRepeticaoAsync", () => {
             try { assert.ok(mensagens.length > 0); done(); }
             catch(e) { done(e); }
         }, { estoqueMinimo: 0, onStatus: function(msg) { mensagens.push(msg); } });
+    });
+});
+
+// ── 13b. Modo Automático: linhas já preenchidas e vários pedidos ───────────────
+describe("Modo Automático — conferência de linhas já preenchidas", () => {
+    const eng = require("./estoque-engine.js");
+    const TAB = "\t";
+    test("_lerTokenCodigo lê quantidade, código e preço", () => {
+        assert.deepEqual(eng._lerTokenCodigo("3*08395(R$29,70)"), { cod: "08395", qtd: 3, preco: 29.7 });
+        assert.deepEqual(eng._lerTokenCodigo("08395"), { cod: "08395", qtd: 1, preco: null });
+        assert.equal(eng._lerTokenCodigo("CREDITO"), null);
+        assert.equal(eng._lerTokenCodigo("222,00"), null);
+    });
+    test("_dividirPedidosDaLinha separa por | só quando cada parte começa com valor", () => {
+        assert.deepEqual(eng._dividirPedidosDaLinha("177,00  CREDITO | 23,00 PIX"), ["177,00  CREDITO", "23,00 PIX"]);
+        assert.deepEqual(eng._dividirPedidosDaLinha("139,00 CREDITO"), ["139,00 CREDITO"]);
+        assert.deepEqual(eng._dividirPedidosDaLinha("Cliente | Loja:"), ["Cliente | Loja:"]);
+    });
+    test("_separarResultadoDaLinha separa base e grupos (com TAB)", () => {
+        const r = eng._separarResultadoDaLinha("222,00" + TAB + "CREDITO" + TAB + "2080(R$15,32) 2*11149(R$33,97)" + TAB + "472(R$74,00)");
+        assert.equal(r.base, "222,00" + TAB + "CREDITO");
+        assert.equal(r.grupos.length, 2);
+        assert.deepEqual(r.grupos[0].itens[1], { cod: "11149", qtd: 2, preco: 33.97 });
+    });
+    test("_separarResultadoDaLinha sem TAB não confunde número da descrição com código", () => {
+        assert.equal(eng._separarResultadoDaLinha("150,00 CREDITO 3").grupos.length, 0);
+        assert.equal(eng._separarResultadoDaLinha("150,00 CREDITO 3*08395 00123").base, "150,00 CREDITO");
+        const m = eng._separarResultadoDaLinha("197,00  PIX  [NAO ENCONTRADO]");
+        assert.equal(m.marcador, true);
+        assert.equal(m.base, "197,00  PIX");
+    });
+    const banco = { "11962": { codigo: "11962", estoque: 7 }, "02080": { codigo: "02080", estoque: 10 } };
+    const buscar = cod => banco[cod] || banco[String(cod).padStart(5, "0")] || null;
+    test("_conferirGrupoNoEstoque aceita quando o estoque cobre (até zerar, sem negativar)", () => {
+        const usos = {};
+        const r = eng._conferirGrupoNoEstoque([{ cod: "11962", qtd: 7, preco: null }], buscar, usos, null, 0);
+        assert.equal(r.ok, true);
+        assert.equal(r.consumo[0].qtd, 7);
+    });
+    test("_conferirGrupoNoEstoque soma o que as linhas anteriores usaram", () => {
+        const r = eng._conferirGrupoNoEstoque([{ cod: "11962", qtd: 6, preco: null }], buscar, { "11962": 2 }, null, 0);
+        assert.equal(r.ok, false);
+        assert.equal(r.motivo, "estoque");
+    });
+    test("_conferirGrupoNoEstoque recusa código inexistente e soma abaixo do valor", () => {
+        assert.equal(eng._conferirGrupoNoEstoque([{ cod: "472", qtd: 1, preco: 74 }], buscar, {}, null, 0).motivo, "inexistente");
+        assert.equal(eng._conferirGrupoNoEstoque([{ cod: "2080", qtd: 1, preco: 15.32 }], buscar, {}, null, 0, 20).motivo, "soma");
+        assert.equal(eng._conferirGrupoNoEstoque([{ cod: "2080", qtd: 2, preco: 15.32 }], buscar, {}, null, 0, 30).ok, true);
+    });
+    test("_conferirGrupoNoEstoque respeita o estoque de parada da lista personalizada", () => {
+        const r = eng._conferirGrupoNoEstoque([{ cod: "02080", qtd: 8, preco: null }], buscar, {}, { "02080": 3 }, 0);
+        assert.equal(r.ok, false);
     });
 });
 

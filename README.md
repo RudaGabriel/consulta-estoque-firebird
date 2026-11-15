@@ -64,12 +64,20 @@ Ele roda num PC da loja e é acessado pelo navegador, nessa máquina ou em qualq
 Processa uma **lista inteira de valores** de uma vez. Cole linhas no formato:
 
 ```
-Pedido 1: 139,00  CREDITO
-Pedido 2: 177,00  CREDITO
-Pedido 3: 197,00  PIX  [NAO ENCONTRADO]
+Pedido 1:
+139,00  CREDITO
+Pedido 2:
+177,00  CREDITO | 23,00  PIX
+Pedido 3:
+197,00  PIX  [NAO ENCONTRADO]
 ```
 
-Para cada linha, o sistema:
+- Cada pedido começa com o **valor** no início da linha. Linhas que não começam com número (como `Pedido 1:` ou o nome do vendedor) são mantidas como títulos.
+- Para **mais de uma forma de pagamento** no mesmo pedido, separe por `|` (ex.: `177,00 CREDITO | 23,00 PIX`). Cada valor recebe os seus códigos, e o resultado volta na mesma linha, separado por ` | `.
+
+**Lista que já tem códigos (resultado anterior):** se você colar de volta uma lista já processada, o sistema **não refaz** as linhas. Ele só **confere no estoque atual**, na ordem da lista, se cada código ainda existe e se a quantidade usada cabe sem deixar o estoque negativo, somando o que as linhas anteriores já usaram. Com a lista personalizada ligada, também respeita o estoque de parada de cada código. A linha que passar sai igual. Só é refeita a linha com código que não existe mais, que está sem estoque suficiente ou cuja soma ficou abaixo do valor. Se a linha tiver mais de um resultado, fica o primeiro que passar. No fim, a mensagem mostra quantos pedidos foram mantidos e quantos foram refeitos, com o motivo.
+
+Para cada linha nova (ou refeita), o sistema:
 
 1. **Sincroniza o estoque** com o banco antes de começar, para nunca trabalhar com números velhos.
 2. Procura **a combinação de itens que mais se aproxima do valor**: primeiro o valor exato, depois dentro da tolerância de + R$ 40.
@@ -266,7 +274,7 @@ node validar-client.js             # sintaxe do JavaScript da interface
 node --test consulta-estoque_test.js
 ```
 
-A suíte tem **137 testes** e cobre o motor de cálculo e o servidor. No servidor, testa a leitura da configuração, a lista personalizada, o SQL gerado, o processamento do estoque e a carga com um **Firebird simulado**. Ela **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
+A suíte tem **145 testes** e cobre o motor de cálculo e o servidor. No servidor, testa a leitura da configuração, a lista personalizada, o SQL gerado, o processamento do estoque e a carga com um **Firebird simulado**. Ela **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
 
 ---
 

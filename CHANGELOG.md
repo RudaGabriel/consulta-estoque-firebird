@@ -9,10 +9,10 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.65.0**.
-- [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.10.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.66.0**.
+- [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.11.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.33.0**.
-- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.15.0**.
+- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.16.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
 - [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.3**.
 - [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. **Removido**.
@@ -24,6 +24,24 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.66.0 (2026-11-15)
+
+```text
+Modo Automático:
+  - Lista que já traz códigos (resultado anterior): cada linha é só
+    conferida, na ordem da lista, contra o estoque atual (código existe,
+    está ativo e a quantidade cabe sem ficar negativa nem abaixo do estoque
+    de parada da lista personalizada; com preços, a soma não fica abaixo do
+    valor). Passou: a linha sai igual. Não passou: só ela é refeita. Com mais
+    de um resultado na linha, fica o primeiro válido. O que as linhas
+    mantidas usam sai do saldo das linhas refeitas.
+  - Vários pedidos na mesma linha, separados por "|" ("177,00 CREDITO |
+    23,00 PIX"); a saída volta junta com " | ". Novo exemplo na tela.
+  - Mensagem final com pedidos mantidos e refeitos (e o motivo).
+  - README: exemplo corrigido (o valor vem numa linha própria, abaixo do
+    título "Pedido N:").
+```
 
 ### 5.65.0 (2026-11-14)
 
@@ -715,6 +733,19 @@ BUG REAL corrigido: alerta "código não existe
 
 _Motor de cálculo (Agrupar, Combinar, Modo Automático)_
 
+### 1.11.0 (2026-11-15)
+
+```text
+Modo Automático:
+  - _dividirPedidosDaLinha: vários pedidos na mesma linha, separados por "|".
+  - _separarResultadoDaLinha, _lerGrupoCodigos e _lerTokenCodigo: leem uma
+    linha que já traz o resultado de um processamento anterior (códigos
+    "3*08395(R$29,70)", com ou sem preço).
+  - _conferirGrupoNoEstoque: confere se esses códigos ainda existem e cabem
+    no estoque (somando o que as linhas anteriores usaram), sem deixar nada
+    negativo.
+```
+
 ### 1.10.0 (2026-11-14)
 
 ```text
@@ -934,6 +965,14 @@ Passa a rodar as verificacoes de integridade
 ## consulta-estoque_test.js
 
 _Suíte de testes_
+
+### 2.16.0 (2026-11-15)
+
+```text
+Testes do Modo Automático com linhas já preenchidas e vários pedidos por
+linha ("|"): leitura dos códigos, divisão dos pedidos e conferência de
+estoque. 145 testes.
+```
 
 ### 2.15.0 (2026-11-14)
 
