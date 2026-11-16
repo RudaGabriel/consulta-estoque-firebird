@@ -171,6 +171,10 @@ npm install node-firebird
 node consulta-estoque.js
 ```
 
+### Ícone da aba (favicon)
+
+Para trocar o ícone que aparece na aba do navegador, coloque um arquivo chamado **`favicon`** na mesma pasta do `consulta-estoque.js`. Formatos aceitos: `.ico`, `.png`, `.svg`, `.webp`, `.jpg`, `.jpeg` ou `.gif`, com até 1 MB. Não é preciso configurar nada nem reiniciar o servidor: basta recarregar a página. Se houver mais de um, vale o primeiro desta ordem: `.ico`, `.png`, `.svg`, `.webp`, `.jpg`, `.jpeg`, `.gif`. Sem o arquivo, o navegador usa o ícone padrão.
+
 > O `node-firebird.bat` é um instalador avulso, só do Node.js e do módulo `node-firebird`, útil para preparar a máquina sem iniciar o servidor.
 
 ---
@@ -225,6 +229,7 @@ Arquivos com BOM ou com números escritos com zero à esquerda (ex.: `03050`) s�
 | `node-firebird.bat` | Instalador avulso do Node.js e do `node-firebird`. |
 | `consulta-estoque_test.js` | Suíte de testes do motor e do servidor. |
 | `validar-client.js` | Valida a sintaxe do JavaScript da interface, que fica dentro de uma string do servidor. |
+| `favicon.ico` / `.png` / `.svg`... | **Opcional.** Ícone da aba do navegador (veja "Ícone da aba"). |
 | `CLAUDE.md` | Regras do projeto para manutenção com o Claude (idioma, créditos, neutralidade, conferência de informações desatualizadas). |
 
 ---
@@ -251,6 +256,7 @@ A gravação é **atômica**: o arquivo é escrito por inteiro antes de substitu
 | Método | Rota | Descrição |
 |---|---|---|
 | GET | `/` | Interface web. |
+| GET | `/favicon.ico` | Ícone da aba: o arquivo `favicon.*` da pasta do sistema (404 quando não existe). |
 | GET | `/api/itens` | Itens, situação da carga e estoque real dos códigos da lista personalizada. |
 | GET | `/api/sse` | Eventos em tempo real (`dados`). |
 | GET | `/api/status` | Situação do servidor e do banco. |
@@ -274,7 +280,7 @@ node validar-client.js             # sintaxe do JavaScript da interface
 node --test consulta-estoque_test.js
 ```
 
-A suíte tem **145 testes** e cobre o motor de cálculo e o servidor. No servidor, testa a leitura da configuração, a lista personalizada, o SQL gerado, o processamento do estoque e a carga com um **Firebird simulado**. Ela **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
+A suíte tem **147 testes** e cobre o motor de cálculo e o servidor. No servidor, testa a leitura da configuração, a lista personalizada, o SQL gerado, o processamento do estoque e a carga com um **Firebird simulado**. Ela **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
 
 ---
 
