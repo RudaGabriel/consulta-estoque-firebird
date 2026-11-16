@@ -5,19 +5,13 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.66.0
+ * @version 5.67.0
  * @changelog
- *   5.66.0 - 2026-11-15 - Modo Automático:
- *     - Lista que já traz códigos (resultado anterior): cada linha é só
- *       conferida, na ordem da lista, contra o estoque atual (código existe,
- *       está ativo e a quantidade cabe sem ficar negativa nem abaixo do
- *       estoque de parada da lista personalizada; com preços, a soma não fica
- *       abaixo do valor). Passou: a linha sai igual. Não passou: só ela é
- *       refeita. Com mais de um resultado na linha, fica o primeiro válido.
- *       O que as linhas mantidas usam sai do saldo das linhas refeitas.
- *     - Vários pedidos na mesma linha, separados por "|"
- *       ("177,00 CREDITO | 23,00 PIX"); a saída volta junta com " | ".
- *     - Mensagem final com pedidos mantidos e refeitos (e o motivo).
+ *   5.67.0 - 2026-11-16 - Favicon direto da pasta: um arquivo "favicon"
+ *     (.ico, .png, .svg, .webp, .jpg, .jpeg ou .gif) na mesma pasta do
+ *     consulta-estoque.js vira o ícone da aba do navegador, sem configurar
+ *     nada e sem reiniciar (lido a cada pedido, com ETag). Nova rota
+ *     GET /favicon.ico; sem arquivo, responde 404 (o navegador usa o padrão).
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
@@ -2136,6 +2130,7 @@ function gerarHTML() {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${escH(APP_NAME)} \u2014 Estoque Dispon\u00edvel</title>
+<link rel="icon" href="/favicon.ico">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -7304,6 +7299,81 @@ function lerBody(req, maxBytes) {
 //   erro(msg, status?)   — responde com {ok:false, erro:msg} (status default 500)
 // Ambos já fechados sobre o `res` da requisição atual (ver dispatchRequest).
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FAVICON OPCIONAL NA PASTA DO SISTEMA
+// Basta colocar um arquivo "favicon" (.ico, .png, .svg, .webp, .jpg, .jpeg ou
+// .gif) na mesma pasta do consulta-estoque.js. A página sempre aponta para
+// /favicon.ico e o servidor entrega o arquivo que encontrar (o tipo certo vai
+// no Content-Type), lido a cada pedido: trocar o arquivo vale sem reiniciar.
+// Só nomes fixos ("favicon.<extensão>"), nunca um caminho vindo da URL.
+// ─────────────────────────────────────────────────────────────────────────────
+const FAVICON_TIPOS = {
+    ".ico": "image/x-icon", ".png": "image/png", ".svg": "image/svg+xml",
+    ".webp": "image/webp", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif"
+};
+const FAVICON_ORDEM     = [".ico", ".png", ".svg", ".webp", ".jpg", ".jpeg", ".gif"];
+const FAVICON_MAX_BYTES = 1024 * 1024; // 1 MB: ícone maior que isso é engano
+let _faviconAvisado = "";
+
+// Puro: escolhe o favicon numa lista de nomes de arquivo (sem diferenciar
+// maiúsculas). Prioridade: .ico, .png, .svg, .webp, .jpg, .jpeg, .gif.
+// Retorna { nome, tipo } ou null.
+function _escolherFavicon(nomes) {
+    const porExt = {};
+    (Array.isArray(nomes) ? nomes : []).forEach(n => {
+        const m = /^favicon(\.[a-z]+)$/i.exec(String(n));
+        if (!m) return;
+        const ext = m[1].toLowerCase();
+        if (FAVICON_TIPOS[ext] && !porExt[ext]) porExt[ext] = String(n);
+    });
+    for (const ext of FAVICON_ORDEM) {
+        if (porExt[ext]) return { nome: porExt[ext], tipo: FAVICON_TIPOS[ext] };
+    }
+    return null;
+}
+
+async function handleGetFavicon(req, res) {
+    const semIcone = () => {
+        if (res.headersSent) return;
+        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache" });
+        res.end("Sem favicon na pasta do sistema.");
+    };
+    let nomes = [];
+    try { nomes = await fs.promises.readdir(PASTA_DADOS); } catch (_) { return semIcone(); }
+    const escolhido = _escolherFavicon(nomes);
+    if (!escolhido) return semIcone();
+    const caminho = path.join(PASTA_DADOS, escolhido.nome);
+    let st;
+    try { st = await fs.promises.stat(caminho); } catch (_) { return semIcone(); }
+    if (!st.isFile() || st.size === 0 || st.size > FAVICON_MAX_BYTES) {
+        const aviso = escolhido.nome + ":" + st.size;
+        if (_faviconAvisado !== aviso) {
+            _faviconAvisado = aviso;
+            logTs("AVISO: " + escolhido.nome + " ignorado (vazio, maior que 1 MB ou n\u00e3o \u00e9 arquivo).");
+        }
+        return semIcone();
+    }
+    const etag = '"' + st.size.toString(16) + "-" + Math.floor(st.mtimeMs).toString(16) + '"';
+    const cab = {
+        "Content-Type": escolhido.tipo,
+        "Cache-Control": "no-cache",
+        "ETag": etag,
+        "X-Content-Type-Options": "nosniff"
+    };
+    // SVG pode conter script: aberto direto, não executa nada.
+    if (escolhido.tipo === "image/svg+xml") cab["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'; img-src data:";
+    if (req.headers["if-none-match"] === etag) {
+        res.writeHead(304, cab);
+        res.end();
+        return;
+    }
+    let buf;
+    try { buf = await fs.promises.readFile(caminho); } catch (_) { return semIcone(); }
+    cab["Content-Length"] = buf.length;
+    res.writeHead(200, cab);
+    res.end(buf);
+}
+
 async function handleGetRoot(req, res, json, erro) {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     res.end(gerarHTML());
@@ -7739,6 +7809,7 @@ async function handlePostConfig(req, res, json, erro) {
 const ROTAS = {
     "GET /":                              handleGetRoot,
     "GET /index.html":                    handleGetRoot,
+    "GET /favicon.ico":                   handleGetFavicon,
     "GET /api/buscar-mais-itens":         handleBuscarMaisItens,
     "GET /api/sse":                        handleSse,
     "GET /api/itens":                     handleGetItens,
@@ -7902,6 +7973,7 @@ if (EXECUCAO_DIRETA) iniciarServidor();
 // Helpers puros expostos para a suíte de testes (sem efeitos colaterais).
 module.exports = {
     _parseJsonTolerante,
+    _escolherFavicon,
     _sanitizarListaPersonalizada,
     _normalizarCodigoNumerico,
     _codigoPadrao5Digitos,

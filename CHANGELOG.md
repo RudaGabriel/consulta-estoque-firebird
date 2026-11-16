@@ -9,10 +9,10 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.66.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.67.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.11.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.33.0**.
-- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.16.0**.
+- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.17.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
 - [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.3**.
 - [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. **Removido**.
@@ -24,6 +24,17 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.67.0 (2026-11-16)
+
+```text
+Favicon direto da pasta: um arquivo "favicon" (.ico, .png, .svg, .webp,
+.jpg, .jpeg ou .gif, até 1 MB) na mesma pasta do consulta-estoque.js vira o
+ícone da aba do navegador, sem configurar nada e sem reiniciar (lido a cada
+pedido, com ETag). Nova rota GET /favicon.ico; sem arquivo, responde 404 e o
+navegador usa o ícone padrão. SVG é servido com Content-Security-Policy, para
+não executar script se for aberto direto.
+```
 
 ### 5.66.0 (2026-11-15)
 
@@ -965,6 +976,13 @@ Passa a rodar as verificacoes de integridade
 ## consulta-estoque_test.js
 
 _Suíte de testes_
+
+### 2.17.0 (2026-11-16)
+
+```text
+Testes do favicon direto da pasta (_escolherFavicon): prioridade das
+extensões, tipo e nomes ignorados. 147 testes.
+```
 
 ### 2.16.0 (2026-11-15)
 

@@ -5,11 +5,11 @@
  *
  * @author Ruda Gabriel
  *
- * @version 2.16.0
+ * @version 2.17.0
  * @changelog
- *   2.16.0 - 2026-11-15 - Testes do Modo Automático com linhas já preenchidas
- *     e vários pedidos por linha ("|"): leitura dos códigos, divisão dos
- *     pedidos e conferência de estoque. 145 testes.
+ *   2.17.0 - 2026-11-16 - Testes do favicon direto da pasta
+ *     (_escolherFavicon): prioridade das extensões, tipo e nomes ignorados.
+ *     147 testes.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * EXECUÇÃO:
@@ -732,6 +732,19 @@ function carregarServidorComFirebirdFalso() {
 }
 
 const srv = carregarServidorComFirebirdFalso();
+
+describe("favicon direto da pasta (_escolherFavicon)", () => {
+    test("escolhe pela prioridade .ico, .png, .svg e informa o tipo", () => {
+        assert.deepEqual(srv._escolherFavicon(["config.json", "favicon.svg", "favicon.png"]), { nome: "favicon.png", tipo: "image/png" });
+        assert.deepEqual(srv._escolherFavicon(["FAVICON.ICO", "favicon.png"]), { nome: "FAVICON.ICO", tipo: "image/x-icon" });
+        assert.deepEqual(srv._escolherFavicon(["favicon.svg"]), { nome: "favicon.svg", tipo: "image/svg+xml" });
+    });
+    test("ignora outros nomes e extensões desconhecidas", () => {
+        assert.equal(srv._escolherFavicon(["favicon.exe", "meu-favicon.png", "favicon.png.bak", "logo.ico"]), null);
+        assert.equal(srv._escolherFavicon([]), null);
+        assert.equal(srv._escolherFavicon(null), null);
+    });
+});
 
 describe("servidor — helpers puros", () => {
     test("_parseJsonTolerante não altera texto válido com ':0' dentro de string", () => {
