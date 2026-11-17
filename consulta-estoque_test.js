@@ -5,12 +5,11 @@
  *
  * @author Ruda Gabriel
  *
- * @version 2.18.0
+ * @version 2.19.0
  * @changelog
- *   2.18.0 - 2026-11-17 - Testes da leitura de códigos por foto
- *     (ocr-digitos.js): modelos completos, rede reconhece "1" e "0",
- *     decisão por banco (ok, corrigido, "1" perdido, ilegível) e imagem em
- *     branco/inválida. 155 testes.
+ *   2.19.0 - 2026-11-17 - Testes das hipóteses de divisão do leitor por foto
+ *     (a divisão que existe no banco vence; duas plausíveis → confira).
+ *     157 testes.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * EXECUÇÃO:
@@ -778,6 +777,21 @@ describe("leitura de códigos por foto (ocr-digitos.js)", () => {
     test("_decidirCodigo: \"1\" perdido no começo vira sugestão para conferir", () => {
         const r = OCR._decidirCodigo([certo(0), certo(9), certo(3), certo(0)], t => t === "10930");
         assert.equal(r.texto, "10930");
+        assert.equal(r.status, "duvida");
+    });
+    test("_decidirHipoteses: divisão alternativa que existe no banco vence a que não existe", () => {
+        // "00" encostado: lido inteiro como "6" (156 não existe) ou dividido em "0","0" (1500 existe)
+        const r = OCR._decidirHipoteses([
+            { probs: [certo(1), certo(5), certo(6)], pen: 0 },
+            { probs: [certo(1), certo(5), certo(0), certo(0)], pen: 0.3 }
+        ], t => t === "1500");
+        assert.equal(r.texto, "1500");
+    });
+    test("_decidirHipoteses: duas leituras plausíveis que existem → confira, nunca ok", () => {
+        const r = OCR._decidirHipoteses([
+            { probs: [certo(1), certo(0), certo(3), certo(2)], pen: 0 },
+            { probs: [certo(1), certo(0), certo(1), certo(3), certo(2)], pen: 0.2 }
+        ], t => t === "1032" || t === "10132");
         assert.equal(r.status, "duvida");
     });
     test("_decidirCodigo: nada parecido no banco → ilegível", () => {

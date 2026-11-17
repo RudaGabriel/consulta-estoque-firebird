@@ -5,17 +5,12 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.68.0
+ * @version 5.69.0
  * @changelog
- *   5.68.0 - 2026-11-17 - Lista personalizada: leitura de códigos escritos à
- *     mão numa foto (botão "Ler códigos de uma foto", colar ou arrastar). A
- *     leitura roda no navegador, grátis e sem internet (ocr-digitos.js +
- *     ocr-digitos-modelos.js), e é conferida com os códigos do banco. Janela
- *     de revisão com a foto marcada: caixa verde (lido com segurança), azul
- *     (ajustado pelo estoque), amarela (confira) e círculo vermelho (não
- *     lido), cada uma com o número da lista ao lado; dá para corrigir e
- *     digitar antes de adicionar. Novas rotas: GET /api/codigos,
- *     GET /ocr/ocr-digitos.js e GET /ocr/ocr-digitos-modelos.js.
+ *   5.69.0 - 2026-11-17 - Leitura de códigos por foto: a revisão vem na ordem
+ *     do que precisa da pessoa (não lidos, "confira", ajustados pelo estoque
+ *     e, por último, lidos com segurança); a numeração na foto segue a mesma
+ *     ordem. Leitor e redes 1.1.0.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
@@ -5572,6 +5567,14 @@ function _ocrLer(im) {
         });
     }).then(function(res) {
         _ocr.lendo = false;
+        // Ordem da revisão: primeiro o que precisa da pessoa (não lidos, depois
+        // "confira" e ajustados), por último os lidos com segurança; dentro de
+        // cada grupo, a ordem da folha. A numeração na foto segue esta ordem.
+        var PESO = { ilegivel: 0, duvida: 1, corrigido: 2, ok: 3 };
+        res.codigos = res.codigos.map(function(c, i) { c._ordemFolha = i; return c; }).sort(function(a, b) {
+            var d = (PESO[a.status] != null ? PESO[a.status] : 1) - (PESO[b.status] != null ? PESO[b.status] : 1);
+            return d || a._ordemFolha - b._ordemFolha;
+        });
         _ocr.resultado = res;
         _ocrMontarLista();
         _ocrDesenhar();

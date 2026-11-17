@@ -130,7 +130,7 @@ Opções:
 Em vez de digitar, você pode **fotografar uma folha com os códigos escritos à mão** (em colunas, como numa lista de papel) e o sistema preenche a lista sozinho.
 
 1. No painel da lista personalizada, clique em **Ler códigos de uma foto** (ou cole a foto com **Ctrl+V**, ou arraste o arquivo para o painel).
-2. Em poucos segundos abre a revisão: a foto com cada código marcado e **numerado**, e ao lado a lista com os mesmos números.
+2. Em poucos segundos abre a revisão: a foto com cada código marcado e **numerado**, e ao lado a lista com os mesmos números. A lista vem na ordem do que precisa de você: **primeiro os não lidos, depois os para conferir, depois os ajustados pelo estoque e por último os lidos com segurança**.
    - **Verde:** lido com segurança e confirmado no estoque.
    - **Azul:** um dígito estava em dúvida e foi ajustado pelo código que existe no estoque.
    - **Amarelo:** confira (leitura incerta, código fora do estoque ou perto de um risco/hachura, onde um dígito pode ter se perdido).
@@ -139,7 +139,9 @@ Em vez de digitar, você pode **fotografar uma folha com os códigos escritos à
 
 A leitura é **gratuita e funciona sem internet**: roda no próprio navegador, com redes neurais de dígitos treinadas para este sistema (inclusive com o "1" escrito em forma de "J"). Nenhuma foto sai do computador. Para o melhor resultado, fotografe de frente, com boa luz e a folha inteira. Números riscados, pontos e as linhas das colunas são ignorados. Formatos aceitos: JPG e PNG (fotos HEIC do iPhone precisam ser convertidas).
 
-Na folha de teste com 102 códigos escritos à mão, o leitor acertou cerca de 93% sozinho. Os demais aparecem em amarelo ou circulados para conferência, e **nenhum código marcado em verde estava errado**.
+**Precisão medida** em 3 fotos de listas reais (266 códigos escritos à mão), testando cada folha com redes que **não a tinham visto** no treino: de **97,5% a 100%** dos códigos lidos sozinhos, e **nenhum código marcado em verde estava errado**. O restante aparece em amarelo ou circulado, para você conferir. Cada código da folha recebe um número; nada é pulado sem aviso.
+
+Por que não usar um leitor de texto pronto (como o Tesseract): testado nas mesmas folhas, ele acertou só 9% dos códigos manuscritos, porque é feito para texto impresso. As redes próprias, treinadas com a caligrafia das listas, são muito mais precisas e também funcionam sem internet.
 
 ---
 
@@ -301,7 +303,7 @@ node validar-client.js             # sintaxe do JavaScript da interface
 node --test consulta-estoque_test.js
 ```
 
-A suíte tem **155 testes** e cobre o motor de cálculo e o servidor. No servidor, testa a leitura da configuração, a lista personalizada, o SQL gerado, o processamento do estoque e a carga com um **Firebird simulado**. Ela **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
+A suíte tem **157 testes** e cobre o motor de cálculo e o servidor. No servidor, testa a leitura da configuração, a lista personalizada, o SQL gerado, o processamento do estoque e a carga com um **Firebird simulado**. Ela **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
 
 ---
 
