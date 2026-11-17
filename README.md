@@ -125,6 +125,22 @@ Opções:
 
   O alerta de "não existe mais no banco" só aparece quando o servidor **confirmou** a consulta de todos os códigos. Uma falha de rede ou de banco nunca gera esse alerta.
 
+### Ler códigos de uma foto
+
+Em vez de digitar, você pode **fotografar uma folha com os códigos escritos à mão** (em colunas, como numa lista de papel) e o sistema preenche a lista sozinho.
+
+1. No painel da lista personalizada, clique em **Ler códigos de uma foto** (ou cole a foto com **Ctrl+V**, ou arraste o arquivo para o painel).
+2. Em poucos segundos abre a revisão: a foto com cada código marcado e **numerado**, e ao lado a lista com os mesmos números.
+   - **Verde:** lido com segurança e confirmado no estoque.
+   - **Azul:** um dígito estava em dúvida e foi ajustado pelo código que existe no estoque.
+   - **Amarelo:** confira (leitura incerta, código fora do estoque ou perto de um risco/hachura, onde um dígito pode ter se perdido).
+   - **Círculo vermelho:** não foi possível ler. Digite o código no campo ao lado, olhando o círculo na foto.
+3. Clique num código da lista para vê-lo destacado na foto. Corrija o que for preciso e clique em **Adicionar à lista**. Códigos que já estão na lista não são repetidos. Depois, clique em **Salvar lista**.
+
+A leitura é **gratuita e funciona sem internet**: roda no próprio navegador, com redes neurais de dígitos treinadas para este sistema (inclusive com o "1" escrito em forma de "J"). Nenhuma foto sai do computador. Para o melhor resultado, fotografe de frente, com boa luz e a folha inteira. Números riscados, pontos e as linhas das colunas são ignorados. Formatos aceitos: JPG e PNG (fotos HEIC do iPhone precisam ser convertidas).
+
+Na folha de teste com 102 códigos escritos à mão, o leitor acertou cerca de 93% sozinho. Os demais aparecem em amarelo ou circulados para conferência, e **nenhum código marcado em verde estava errado**.
+
 ---
 
 ## Como o estoque é lido do banco
@@ -230,6 +246,9 @@ Arquivos com BOM ou com números escritos com zero à esquerda (ex.: `03050`) s�
 | `consulta-estoque_test.js` | Suíte de testes do motor e do servidor. |
 | `validar-client.js` | Valida a sintaxe do JavaScript da interface, que fica dentro de uma string do servidor. |
 | `favicon.ico` / `.png` / `.svg`... | **Opcional.** Ícone da aba do navegador (veja "Ícone da aba"). |
+| `ocr-digitos.js` | Leitor de códigos escritos à mão numa foto (lista personalizada). Roda no navegador; sem ele, só o botão "Ler códigos de uma foto" deixa de funcionar. |
+| `ocr-digitos-modelos.js` | As redes neurais treinadas usadas pelo leitor (gerado pelos scripts de `ferramentas/ocr/`). |
+| `ferramentas/ocr/` | Scripts para treinar de novo as redes do leitor (Python + PyTorch). Não são usados no dia a dia. |
 | `CLAUDE.md` | Regras do projeto para manutenção com o Claude (idioma, créditos, neutralidade, conferência de informações desatualizadas). |
 
 ---
@@ -256,6 +275,8 @@ A gravação é **atômica**: o arquivo é escrito por inteiro antes de substitu
 | Método | Rota | Descrição |
 |---|---|---|
 | GET | `/` | Interface web. |
+| GET | `/api/codigos` | Todos os códigos conhecidos do banco (usado para conferir a leitura por foto). |
+| GET | `/ocr/ocr-digitos.js` e `/ocr/ocr-digitos-modelos.js` | Leitor de códigos por foto e as redes treinadas (baixados só quando o recurso é usado). |
 | GET | `/favicon.ico` | Ícone da aba: o arquivo `favicon.*` da pasta do sistema (404 quando não existe). |
 | GET | `/api/itens` | Itens, situação da carga e estoque real dos códigos da lista personalizada. |
 | GET | `/api/sse` | Eventos em tempo real (`dados`). |
@@ -280,7 +301,7 @@ node validar-client.js             # sintaxe do JavaScript da interface
 node --test consulta-estoque_test.js
 ```
 
-A suíte tem **147 testes** e cobre o motor de cálculo e o servidor. No servidor, testa a leitura da configuração, a lista personalizada, o SQL gerado, o processamento do estoque e a carga com um **Firebird simulado**. Ela **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
+A suíte tem **155 testes** e cobre o motor de cálculo e o servidor. No servidor, testa a leitura da configuração, a lista personalizada, o SQL gerado, o processamento do estoque e a carga com um **Firebird simulado**. Ela **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
 
 ---
 

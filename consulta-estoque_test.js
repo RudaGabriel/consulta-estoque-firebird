@@ -5,11 +5,12 @@
  *
  * @author Ruda Gabriel
  *
- * @version 2.17.0
+ * @version 2.18.0
  * @changelog
- *   2.17.0 - 2026-11-16 - Testes do favicon direto da pasta
- *     (_escolherFavicon): prioridade das extensões, tipo e nomes ignorados.
- *     147 testes.
+ *   2.18.0 - 2026-11-17 - Testes da leitura de códigos por foto
+ *     (ocr-digitos.js): modelos completos, rede reconhece "1" e "0",
+ *     decisão por banco (ok, corrigido, "1" perdido, ilegível) e imagem em
+ *     branco/inválida. 155 testes.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * EXECUÇÃO:
@@ -732,6 +733,64 @@ function carregarServidorComFirebirdFalso() {
 }
 
 const srv = carregarServidorComFirebirdFalso();
+
+describe("leitura de códigos por foto (ocr-digitos.js)", () => {
+    const OCR = require("./ocr-digitos.js");
+    const fsT = require("fs");
+    const srcModelos = fsT.readFileSync(require("path").join(__dirname, "ocr-digitos-modelos.js"), "utf8");
+    OCR.MODELOS = new Function(srcModelos + "; return OCR_DIGITOS_MODELOS;")();
+    // probabilidades "quase certas" para montar casos de decisão
+    const certo = d => { const p = new Float32Array(11).fill(0.001); p[d] = 0.99; return p; };
+    const meio = (a, b) => { const p = new Float32Array(11).fill(0.001); p[a] = 0.55; p[b] = 0.44; return p; };
+    test("_chave ignora zeros à esquerda", () => {
+        assert.equal(OCR._chave("02990"), "2990");
+        assert.equal(OCR._chave("0"), "0");
+    });
+    test("arquivo de modelos traz duas redes completas", () => {
+        assert.equal(OCR.MODELOS.length, 2);
+        const m = OCR._carregarModelo(OCR.MODELOS[0]);
+        assert.equal(m.c1w.length, 16 * 9);
+        assert.equal(m.d2w.length, 64 * 11);
+    });
+    test("rede reconhece um traço vertical como 1 e um anel como 0", () => {
+        const m = OCR._carregarModelo(OCR.MODELOS[0]);
+        const um = new Float32Array(784), zero = new Float32Array(784);
+        for (let y = 4; y < 24; y++) { um[y * 28 + 13] = 1; um[y * 28 + 14] = 1; }
+        for (let a = 0; a < 360; a += 2) {
+            const x = Math.round(14 + 6 * Math.cos(a * Math.PI / 180)), y = Math.round(14 + 9 * Math.sin(a * Math.PI / 180));
+            zero[y * 28 + x] = 1; zero[y * 28 + x + 1] = 1;
+        }
+        const pu = OCR._classificar(m, um), pz = OCR._classificar(m, zero);
+        assert.equal(pu.indexOf(Math.max(...pu)), 1);
+        assert.equal(pz.indexOf(Math.max(...pz)), 0);
+    });
+    test("_decidirCodigo: leitura segura que existe no banco sai como ok", () => {
+        const r = OCR._decidirCodigo([certo(2), certo(9), certo(9), certo(0)], t => t === "2990");
+        assert.equal(r.status, "ok");
+        assert.equal(r.texto, "2990");
+    });
+    test("_decidirCodigo: dígito em dúvida é resolvido pelo banco", () => {
+        // 2?90 com o 2º dígito 9 (55%) ou 4 (44%): só 2490 existe → corrigido/dúvida, nunca ok
+        const r = OCR._decidirCodigo([certo(2), meio(9, 4), certo(9), certo(0)], t => t === "2490");
+        assert.equal(r.texto, "2490");
+        assert.notEqual(r.status, "ok");
+    });
+    test("_decidirCodigo: \"1\" perdido no começo vira sugestão para conferir", () => {
+        const r = OCR._decidirCodigo([certo(0), certo(9), certo(3), certo(0)], t => t === "10930");
+        assert.equal(r.texto, "10930");
+        assert.equal(r.status, "duvida");
+    });
+    test("_decidirCodigo: nada parecido no banco → ilegível", () => {
+        const r = OCR._decidirCodigo([certo(7), certo(7), certo(7)], () => false);
+        assert.equal(r.status, "ilegivel");
+    });
+    test("lerImagem: folha em branco não tem códigos; imagem inválida é recusada", async () => {
+        const W = 200, H = 150, d = new Uint8ClampedArray(W * H * 4).fill(235);
+        const r = await OCR.lerImagem({ width: W, height: H, data: d }, {});
+        assert.equal(r.codigos.length, 0);
+        await assert.rejects(OCR.lerImagem(null, {}));
+    });
+});
 
 describe("favicon direto da pasta (_escolherFavicon)", () => {
     test("escolhe pela prioridade .ico, .png, .svg e informa o tipo", () => {

@@ -5,13 +5,17 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.67.0
+ * @version 5.68.0
  * @changelog
- *   5.67.0 - 2026-11-16 - Favicon direto da pasta: um arquivo "favicon"
- *     (.ico, .png, .svg, .webp, .jpg, .jpeg ou .gif) na mesma pasta do
- *     consulta-estoque.js vira o ícone da aba do navegador, sem configurar
- *     nada e sem reiniciar (lido a cada pedido, com ETag). Nova rota
- *     GET /favicon.ico; sem arquivo, responde 404 (o navegador usa o padrão).
+ *   5.68.0 - 2026-11-17 - Lista personalizada: leitura de códigos escritos à
+ *     mão numa foto (botão "Ler códigos de uma foto", colar ou arrastar). A
+ *     leitura roda no navegador, grátis e sem internet (ocr-digitos.js +
+ *     ocr-digitos-modelos.js), e é conferida com os códigos do banco. Janela
+ *     de revisão com a foto marcada: caixa verde (lido com segurança), azul
+ *     (ajustado pelo estoque), amarela (confira) e círculo vermelho (não
+ *     lido), cada uma com o número da lista ao lado; dá para corrigir e
+ *     digitar antes de adicionar. Novas rotas: GET /api/codigos,
+ *     GET /ocr/ocr-digitos.js e GET /ocr/ocr-digitos-modelos.js.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
@@ -2487,6 +2491,24 @@ td{padding:7px 12px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis
   outline:none;resize:vertical;transition:border-color .18s;line-height:1.55;margin-top:8px}
 .auto-ta-lp:focus{border-color:var(--acc)}
 .auto-lp-hint{font-size:10.5px;color:var(--txt3);margin-top:5px;line-height:1.5}
+/* Leitura de códigos por foto */
+.ocr-barra{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.ocr-barra .auto-lp-hint{margin:0}
+#lpBx.ocr-soltar{outline:2px dashed var(--acc);outline-offset:-6px}
+.ocr-corpo{display:flex;gap:12px;flex-wrap:wrap;min-height:0}
+.ocr-img-wrap{flex:1 1 440px;min-width:0;max-height:62vh;overflow:auto;background:#0b0f18;border:1px solid var(--brd);border-radius:6px}
+.ocr-img-wrap canvas{display:block;width:100%;height:auto}
+.ocr-lista{flex:1 1 260px;max-width:360px;max-height:62vh;overflow-y:auto;display:flex;flex-direction:column;gap:3px}
+.ocr-it{display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:5px;border-left:4px solid var(--brd);background:var(--bg2);cursor:pointer;font-size:12px}
+.ocr-it.sel{outline:1px solid var(--acc)}
+.ocr-it.ok{border-left-color:var(--grn)}
+.ocr-it.corrigido{border-left-color:var(--acc)}
+.ocr-it.duvida{border-left-color:var(--ylw)}
+.ocr-it.ilegivel{border-left-color:var(--red);background:rgba(239,83,80,.10)}
+.ocr-it .ocr-n{color:var(--txt3);min-width:22px;text-align:right}
+.ocr-it input[type=text]{width:92px;padding:3px 6px;font-size:12px;font-family:Consolas,monospace}
+.ocr-it .ocr-st{flex:1;min-width:0;color:var(--txt2);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ocr-resumo b{color:var(--txt)}
 .auto-ftr{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .auto-status{font-size:11px;color:var(--txt2);font-style:italic;flex:1}
 .auto-status.ok{color:var(--grn)}
@@ -2929,6 +2951,13 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
     </div>
     <div>
       <div class="cl" style="margin-bottom:4px">C&oacute;digos</div>
+      <div class="ocr-barra">
+        <button class="btn btn-s btn-sm" type="button" onclick="_ocrEscolherFoto()" title="L&ecirc; os c&oacute;digos escritos &agrave; m&atilde;o numa foto e adiciona &agrave; lista (gratuito, funciona sem internet)">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:middle;margin-right:5px"><path d="M2 5.5h2.5L6 3.5h4l1.5 2H14v7.5H2z"/><circle cx="8" cy="9" r="2.4"/></svg>Ler c&oacute;digos de uma foto
+        </button>
+        <span class="auto-lp-hint">ou cole (Ctrl+V) / arraste a foto para este painel</span>
+        <input type="file" id="ocrArquivo" accept="image/*" style="display:none" onchange="_ocrArquivoEscolhido(this)">
+      </div>
       <textarea class="auto-ta-lp" id="lpTextarea" style="min-height:220px" placeholder="00278, 30&#10;08395"></textarea>
       <div class="auto-lp-hint">Os c&oacute;digos podem se repetir entre e dentro das combina&ccedil;&otilde;es para fechar o valor. Na sa&iacute;da, repeti&ccedil;&otilde;es aparecem como <strong>3*c&oacute;digo</strong>.</div>
     </div>
@@ -2937,6 +2966,28 @@ html.perf-baixa .spin-svg{animation:sp 1.6s linear infinite!important}
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-d btn-sm" onclick="fecharListaPersonalizadaModal()">Cancelar</button>
         <button class="btn btn-p btn-sm" id="lpSalvarBtn" onclick="salvarListaPersonalizada()">Salvar lista</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: REVISÃO DA LEITURA DE CÓDIGOS POR FOTO -->
+<div class="auto-ov" id="ocrOv">
+  <div class="auto-bx" style="max-width:1020px;width:96%">
+    <div class="auto-ttl">
+      <span>Leitura de c&oacute;digos da foto</span>
+      <button class="auto-close" onclick="_ocrFechar()" title="Fechar" aria-label="Fechar"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+    </div>
+    <div class="auto-desc ocr-resumo" id="ocrResumo">Preparando a leitura...</div>
+    <div class="ocr-corpo">
+      <div class="ocr-img-wrap" id="ocrImgWrap"><canvas id="ocrCanvas" width="10" height="10"></canvas></div>
+      <div class="ocr-lista" id="ocrLista"></div>
+    </div>
+    <div class="auto-ftr">
+      <span class="auto-status" id="ocrStatus"></span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-d btn-sm" onclick="_ocrFechar()">Cancelar</button>
+        <button class="btn btn-p btn-sm" id="ocrAdicionarBtn" onclick="_ocrAdicionar()" disabled>Adicionar &agrave; lista</button>
       </div>
     </div>
   </div>
@@ -5432,6 +5483,255 @@ function fecharListaPersonalizadaModal() {
     }
 }
 
+// ── Leitura de códigos por foto (lista personalizada) ─────────────────────────
+// Tudo roda no navegador, sem internet e sem custo: ocr-digitos.js separa a
+// tinta do papel, acha cada número e lê os dígitos com redes neurais próprias
+// (ocr-digitos-modelos.js). O resultado é conferido com os códigos do banco.
+// Os scripts só são baixados do servidor na primeira vez que o recurso é usado.
+var _ocr = { resultado: null, imagem: null, escala: 1, selecionado: -1, lendo: false };
+var _ocrScriptsPromessa = null;
+var OCR_STATUS_TXT = {
+    ok: 'lido com segurança',
+    corrigido: 'ajustado pelo estoque',
+    duvida: 'confira',
+    ilegivel: 'não foi possível ler'
+};
+function _ocrCarregarScript(url) {
+    return new Promise(function(resolve, reject) {
+        var sc = document.createElement('script');
+        sc.src = url; sc.async = true;
+        sc.onload = function() { resolve(); };
+        sc.onerror = function() { reject(new Error('Não foi possível carregar ' + url)); };
+        document.head.appendChild(sc);
+    });
+}
+function _ocrGarantirLeitor() {
+    if (window.OcrDigitos && typeof OCR_DIGITOS_MODELOS !== 'undefined') return Promise.resolve();
+    if (!_ocrScriptsPromessa) {
+        _ocrScriptsPromessa = _ocrCarregarScript('/ocr/ocr-digitos-modelos.js')
+            .then(function() { return _ocrCarregarScript('/ocr/ocr-digitos.js'); })
+            .catch(function(e) { _ocrScriptsPromessa = null; throw e; });
+    }
+    return _ocrScriptsPromessa;
+}
+function _ocrEscolherFoto() {
+    var inp = document.getElementById('ocrArquivo');
+    if (inp) inp.click();
+}
+function _ocrArquivoEscolhido(inp) {
+    var f = inp && inp.files && inp.files[0];
+    if (inp) inp.value = '';
+    if (f) _ocrProcessarArquivo(f);
+}
+function _ocrProcessarArquivo(f) {
+    if (_ocr.lendo) { toast('Aguarde: uma foto ainda está sendo lida.', 3000); return; }
+    if (!f || (f.type && f.type.indexOf('image/') !== 0)) { toast('Escolha um arquivo de imagem (foto em JPG ou PNG).', 4000); return; }
+    if (f.size > 30 * 1024 * 1024) { toast('A foto é grande demais (máximo 30 MB).', 4000); return; }
+    var url = URL.createObjectURL(f);
+    var im = new Image();
+    im.onload = function() { URL.revokeObjectURL(url); _ocrLer(im); };
+    im.onerror = function() {
+        URL.revokeObjectURL(url);
+        toast('Não foi possível abrir esta imagem. Envie em JPG ou PNG (fotos HEIC do iPhone precisam ser convertidas).', 6000);
+    };
+    im.src = url;
+}
+function _ocrAbrirModal() {
+    var ov = document.getElementById('ocrOv');
+    if (ov) ov.classList.add('on');
+}
+function _ocrFechar() {
+    var ov = document.getElementById('ocrOv');
+    if (ov) ov.classList.remove('on');
+}
+function _ocrLer(im) {
+    var LADO = 2400;
+    var esc = Math.min(1, LADO / Math.max(im.naturalWidth || im.width, im.naturalHeight || im.height));
+    var w = Math.max(1, Math.round((im.naturalWidth || im.width) * esc));
+    var h = Math.max(1, Math.round((im.naturalHeight || im.height) * esc));
+    var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    var cx = cv.getContext('2d');
+    cx.drawImage(im, 0, 0, w, h);
+    var dados;
+    try { dados = cx.getImageData(0, 0, w, h); }
+    catch (e) { toast('Não foi possível ler os pixels desta imagem.', 4000); return; }
+    _ocr.imagem = cv; _ocr.resultado = null; _ocr.selecionado = -1; _ocr.lendo = true;
+    var lista = document.getElementById('ocrLista'); if (lista) lista.innerHTML = '';
+    var resumo = document.getElementById('ocrResumo'); if (resumo) resumo.textContent = 'Lendo a foto...';
+    var st = document.getElementById('ocrStatus'); if (st) { st.textContent = ''; st.className = 'auto-status'; }
+    var bt = document.getElementById('ocrAdicionarBtn'); if (bt) bt.disabled = true;
+    _ocrDesenhar();
+    _ocrAbrirModal();
+    var codigosPromessa = apiFetch('/api/codigos').then(function(d) { return d && Array.isArray(d.codigos) ? d.codigos : null; });
+    Promise.all([_ocrGarantirLeitor(), codigosPromessa]).then(function(r) {
+        var codigos = r[1];
+        if (!codigos || !codigos.length) toast('Sem a lista de códigos do banco: a leitura não será conferida com o estoque.', 5000);
+        return window.OcrDigitos.lerImagem(dados, {
+            codigosExistentes: codigos,
+            aoProgredir: function(fr, txt) { if (st) st.textContent = txt + ' ' + Math.round(fr * 100) + '%'; }
+        });
+    }).then(function(res) {
+        _ocr.lendo = false;
+        _ocr.resultado = res;
+        _ocrMontarLista();
+        _ocrDesenhar();
+    }).catch(function(e) {
+        _ocr.lendo = false;
+        if (st) { st.textContent = 'Falha na leitura: ' + (e && e.message ? e.message : e); st.className = 'auto-status er'; }
+        if (resumo) resumo.textContent = 'Não foi possível ler a foto. Verifique se os arquivos ocr-digitos.js e ocr-digitos-modelos.js estão na pasta do sistema.';
+    });
+}
+function _ocrDesenhar() {
+    var cv = document.getElementById('ocrCanvas'), src = _ocr.imagem;
+    if (!cv || !src) return;
+    var LARG = Math.min(src.width, 1600), esc = LARG / src.width;
+    cv.width = LARG; cv.height = Math.round(src.height * esc);
+    _ocr.escala = esc;
+    var cx = cv.getContext('2d');
+    cx.drawImage(src, 0, 0, cv.width, cv.height);
+    var res = _ocr.resultado;
+    if (!res) return;
+    var cores = { ok: '#43a047', corrigido: '#1e88e5', duvida: '#f9a825', ilegivel: '#e53935' };
+    res.codigos.forEach(function(c, i) {
+        var b = c.caixa, x = b.x * esc, y = b.y * esc, w = b.w * esc, h = b.h * esc;
+        var sel = i === _ocr.selecionado;
+        cx.strokeStyle = cores[c.status] || '#999';
+        cx.lineWidth = sel ? 4 : (c.status === 'ilegivel' ? 3 : 2);
+        if (c.status === 'ilegivel') {
+            // Circula o que não foi lido, para a pessoa achar fácil na foto.
+            cx.beginPath();
+            cx.ellipse(x + w / 2, y + h / 2, w / 2 + 10, h / 2 + 10, 0, 0, Math.PI * 2);
+            cx.stroke();
+        } else {
+            cx.strokeRect(x - 2, y - 2, w + 4, h + 4);
+        }
+        // Etiqueta numerada (mesmo número da lista ao lado), para a pessoa se
+        // localizar na foto: fundo na cor do status, número branco.
+        var rotulo = String(i + 1);
+        var fonte = Math.max(12, Math.min(22, Math.round(h * 0.55)));
+        cx.font = 'bold ' + fonte + 'px sans-serif';
+        var lw = cx.measureText(rotulo).width + 8, lh = fonte + 4;
+        var ex = Math.max(0, x - 4), ey = Math.max(0, y - lh - 4);
+        cx.fillStyle = cores[c.status] || '#999';
+        cx.fillRect(ex, ey, lw, lh);
+        if (sel) { cx.strokeStyle = '#ffffff'; cx.lineWidth = 2; cx.strokeRect(ex, ey, lw, lh); }
+        cx.fillStyle = '#ffffff';
+        cx.textBaseline = 'top';
+        cx.fillText(rotulo, ex + 4, ey + 2);
+        cx.textBaseline = 'alphabetic';
+    });
+}
+function _ocrMontarLista() {
+    var lista = document.getElementById('ocrLista'), res = _ocr.resultado;
+    if (!lista || !res) return;
+    lista.innerHTML = '';
+    var cont = { ok: 0, corrigido: 0, duvida: 0, ilegivel: 0 };
+    res.codigos.forEach(function(c, i) {
+        cont[c.status] = (cont[c.status] || 0) + 1;
+        var linha = document.createElement('label');
+        linha.className = 'ocr-it ' + c.status;
+        linha.setAttribute('data-i', String(i));
+        var chk = document.createElement('input');
+        chk.type = 'checkbox'; chk.checked = c.status !== 'ilegivel';
+        chk.className = 'ocr-chk';
+        var n = document.createElement('span'); n.className = 'ocr-n'; n.textContent = String(i + 1);
+        var inp = document.createElement('input');
+        inp.type = 'text'; inp.className = 'ocr-inp'; inp.inputMode = 'numeric';
+        inp.value = c.status === 'ilegivel' ? '' : c.texto;
+        inp.placeholder = c.status === 'ilegivel' ? 'digite' : '';
+        var stx = document.createElement('span'); stx.className = 'ocr-st';
+        stx.textContent = OCR_STATUS_TXT[c.status] + (c.status === 'corrigido' && c.alternativas && c.alternativas[0] ? ' (lido ' + c.alternativas[0] + ')' : '');
+        stx.title = stx.textContent;
+        inp.addEventListener('focus', function() { _ocrSelecionar(i, false); });
+        inp.addEventListener('input', function() { if (inp.value.trim()) chk.checked = true; });
+        linha.addEventListener('click', function() { _ocrSelecionar(i, false); });
+        linha.appendChild(chk); linha.appendChild(n); linha.appendChild(inp); linha.appendChild(stx);
+        lista.appendChild(linha);
+    });
+    var resumo = document.getElementById('ocrResumo');
+    if (resumo) {
+        resumo.innerHTML = '<b>' + res.codigos.length + '</b> código' + (res.codigos.length === 1 ? '' : 's') + ' encontrado' + (res.codigos.length === 1 ? '' : 's') + ': ' +
+            '<span style="color:var(--grn)">' + cont.ok + ' lido' + (cont.ok === 1 ? '' : 's') + ' com segurança</span>, ' +
+            '<span style="color:var(--acc)">' + cont.corrigido + ' ajustado' + (cont.corrigido === 1 ? '' : 's') + ' pelo estoque</span>, ' +
+            '<span style="color:var(--ylw)">' + cont.duvida + ' para conferir</span> e ' +
+            '<span style="color:var(--red)">' + cont.ilegivel + ' não lido' + (cont.ilegivel === 1 ? '' : 's') + '</span>.' +
+            (cont.ilegivel ? ' Os não lidos estão <b>circulados em vermelho</b> na foto: digite-os na lista ao lado.' : '') +
+            ' Clique num código para vê-lo na foto.';
+    }
+    var st = document.getElementById('ocrStatus'); if (st) { st.textContent = ''; st.className = 'auto-status'; }
+    var bt = document.getElementById('ocrAdicionarBtn'); if (bt) bt.disabled = !res.codigos.length;
+    if (!res.codigos.length && st) { st.textContent = 'Nenhum código encontrado na foto. Tente uma foto mais nítida, de frente e bem iluminada.'; st.className = 'auto-status er'; }
+}
+function _ocrSelecionar(i, focar) {
+    _ocr.selecionado = i;
+    _ocrDesenhar();
+    var lista = document.getElementById('ocrLista');
+    if (lista) Array.prototype.forEach.call(lista.children, function(el) { el.classList.toggle('sel', el.getAttribute('data-i') === String(i)); });
+    var c = _ocr.resultado && _ocr.resultado.codigos[i], wrap = document.getElementById('ocrImgWrap'), cv = document.getElementById('ocrCanvas');
+    if (c && wrap && cv) {
+        var f = cv.clientWidth / cv.width;
+        wrap.scrollTop = Math.max(0, (c.caixa.y * _ocr.escala) * f - wrap.clientHeight / 2);
+        wrap.scrollLeft = Math.max(0, (c.caixa.x * _ocr.escala) * f - wrap.clientWidth / 2);
+    }
+}
+function _ocrSoDigitos(t) {
+    var s = String(t || ''), out = '';
+    for (var i = 0; i < s.length; i++) { var c = s.charCodeAt(i); if (c >= 48 && c <= 57) out += s.charAt(i); }
+    return out;
+}
+function _ocrAdicionar() {
+    var lista = document.getElementById('ocrLista'), ta = document.getElementById('lpTextarea');
+    if (!lista || !ta) return;
+    var NL = String.fromCharCode(10);
+    var existentes = {};
+    ta.value.split(NL).forEach(function(l) {
+        var cod = _ocrSoDigitos(l.split(',')[0]);
+        if (cod) existentes[cod.replace(/^0+(?=.)/, '')] = true;
+    });
+    var novos = [], repetidos = 0, pendentes = 0;
+    Array.prototype.forEach.call(lista.children, function(el) {
+        var chk = el.querySelector('.ocr-chk'), inp = el.querySelector('.ocr-inp');
+        var cod = _ocrSoDigitos(inp && inp.value);
+        if (!chk || !chk.checked || !cod) { if (el.classList.contains('ilegivel') && !cod) pendentes++; return; }
+        var k = cod.replace(/^0+(?=.)/, '');
+        if (existentes[k]) { repetidos++; return; }
+        existentes[k] = true; novos.push(cod);
+    });
+    if (novos.length) {
+        var atual = ta.value.replace(/[ ]+$/, '');
+        ta.value = atual + (atual && atual.charAt(atual.length - 1) !== NL ? NL : '') + novos.join(NL);
+    }
+    _ocrFechar();
+    toast(novos.length + (novos.length === 1 ? ' código adicionado' : ' códigos adicionados') + ' à lista' +
+          (repetidos ? ' (' + repetidos + ' já estava' + (repetidos === 1 ? '' : 'm') + ' na lista)' : '') +
+          (pendentes ? '. ' + pendentes + ' não lido' + (pendentes === 1 ? '' : 's') + ' ficou de fora' : '') +
+          '. Confira e clique em "Salvar lista".', 6000);
+}
+// Colar (Ctrl+V) ou arrastar uma foto para o painel da lista personalizada.
+document.addEventListener('DOMContentLoaded', function() {
+    var bx = document.getElementById('lpBx');
+    if (!bx) return;
+    bx.addEventListener('paste', function(e) {
+        var itens = e.clipboardData && e.clipboardData.items;
+        if (!itens) return;
+        for (var i = 0; i < itens.length; i++) {
+            if (itens[i].kind === 'file' && itens[i].type.indexOf('image/') === 0) {
+                var f = itens[i].getAsFile();
+                if (f) { e.preventDefault(); _ocrProcessarArquivo(f); return; }
+            }
+        }
+    });
+    bx.addEventListener('dragover', function(e) {
+        if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') !== -1) { e.preventDefault(); bx.classList.add('ocr-soltar'); }
+    });
+    bx.addEventListener('dragleave', function() { bx.classList.remove('ocr-soltar'); });
+    bx.addEventListener('drop', function(e) {
+        bx.classList.remove('ocr-soltar');
+        var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f) { e.preventDefault(); _ocrProcessarArquivo(f); }
+    });
+});
+
 function salvarListaPersonalizada() {
     var ta  = document.getElementById('lpTextarea');
     var st  = document.getElementById('lpStatus');
@@ -7332,6 +7632,49 @@ function _escolherFavicon(nomes) {
     return null;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// LEITURA DE CÓDIGOS POR FOTO (lista personalizada)
+// O leitor (ocr-digitos.js) e as redes treinadas (ocr-digitos-modelos.js)
+// ficam na pasta do sistema e só são baixados pela tela quando o usuário
+// usa o recurso. Nomes fixos, lidos uma vez e guardados em memória.
+// ─────────────────────────────────────────────────────────────────────────────
+const _arquivosOcr = { "ocr-digitos.js": null, "ocr-digitos-modelos.js": null };
+async function _servirArquivoOcr(nome, res) {
+    if (!Object.prototype.hasOwnProperty.call(_arquivosOcr, nome)) {
+        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end("Arquivo desconhecido.");
+        return;
+    }
+    if (!_arquivosOcr[nome]) {
+        try {
+            _arquivosOcr[nome] = await fs.promises.readFile(path.join(__dirname, nome));
+        } catch (_) {
+            res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-cache" });
+            res.end("Arquivo " + nome + " n\u00e3o encontrado na pasta do sistema.");
+            return;
+        }
+    }
+    const buf = _arquivosOcr[nome];
+    res.writeHead(200, {
+        "Content-Type": "application/javascript; charset=utf-8",
+        "Content-Length": buf.length,
+        "Cache-Control": "no-cache",
+        "X-Content-Type-Options": "nosniff"
+    });
+    res.end(buf);
+}
+async function handleGetOcrLeitor(req, res)  { await _servirArquivoOcr("ocr-digitos.js", res); }
+async function handleGetOcrModelos(req, res) { await _servirArquivoOcr("ocr-digitos-modelos.js", res); }
+
+// Todos os códigos conhecidos do banco (catálogo completo + lista
+// personalizada), para a leitura por foto conferir o que leu.
+async function handleGetCodigos(req, res, json) {
+    const vistos = new Set();
+    (_catalogoCompleto || []).forEach(it => { if (it && it.codigo != null) vistos.add(String(it.codigo)); });
+    Object.keys(_lpEstoquesReais || {}).forEach(c => vistos.add(String(c)));
+    json({ codigos: Array.from(vistos) });
+}
+
 async function handleGetFavicon(req, res) {
     const semIcone = () => {
         if (res.headersSent) return;
@@ -7813,6 +8156,9 @@ const ROTAS = {
     "GET /api/buscar-mais-itens":         handleBuscarMaisItens,
     "GET /api/sse":                        handleSse,
     "GET /api/itens":                     handleGetItens,
+    "GET /api/codigos":                   handleGetCodigos,
+    "GET /ocr/ocr-digitos.js":            handleGetOcrLeitor,
+    "GET /ocr/ocr-digitos-modelos.js":    handleGetOcrModelos,
     "POST /api/marcar-usado":             handleMarcarUsado,
     "POST /api/resetar-usados":           handleResetarUsados,
     "GET /api/lista-personalizada":       handleGetListaPersonalizada,
