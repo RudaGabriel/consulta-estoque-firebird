@@ -9,10 +9,13 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.67.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.68.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.11.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.33.0**.
-- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.17.0**.
+- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.18.0**.
+- [`ocr-digitos.js`](#ocr-digitosjs): Leitor de códigos escritos à mão numa foto. Versão atual **1.0.0**.
+- [`ocr-digitos-modelos.js`](#ocr-digitos-modelosjs): Redes neurais treinadas do leitor. Versão atual **1.0.0**.
+- [`ferramentas/ocr/`](#ferramentasocr): Scripts de treino do leitor. Versão atual **1.0.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
 - [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.3**.
 - [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. **Removido**.
@@ -24,6 +27,20 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.68.0 (2026-11-17)
+
+```text
+Lista personalizada: leitura de códigos escritos à mão numa foto (botão "Ler
+códigos de uma foto", colar com Ctrl+V ou arrastar). A leitura roda no
+navegador, grátis e sem internet (ocr-digitos.js + ocr-digitos-modelos.js),
+e é conferida com os códigos do banco. Janela de revisão com a foto marcada:
+caixa verde (lido com segurança), azul (ajustado pelo estoque), amarela
+(confira) e círculo vermelho (não lido), cada uma com o mesmo número da
+lista ao lado; dá para corrigir e digitar antes de adicionar, sem repetir
+códigos que já estão na lista. Novas rotas: GET /api/codigos,
+GET /ocr/ocr-digitos.js e GET /ocr/ocr-digitos-modelos.js.
+```
 
 ### 5.67.0 (2026-11-16)
 
@@ -977,6 +994,14 @@ Passa a rodar as verificacoes de integridade
 
 _Suíte de testes_
 
+### 2.18.0 (2026-11-17)
+
+```text
+Testes da leitura de códigos por foto (ocr-digitos.js): modelos completos,
+rede reconhece "1" e "0", decisão por banco (ok, corrigido, "1" perdido no
+começo, ilegível) e imagem em branco/inválida. 155 testes.
+```
+
 ### 2.17.0 (2026-11-16)
 
 ```text
@@ -1111,6 +1136,58 @@ Testes de regressão para o bug "Agrupar não
   estável (apenas pares e triplas, sem a fase de subset-sum/DP que se
   mostrou não confiável). describe() de regressão atualizado para
   também garantir que nenhum grupo retornado tem mais de 3 itens.
+```
+
+---
+
+## ocr-digitos.js
+
+_Leitor de códigos escritos à mão numa foto_
+
+### 1.0.0 (2026-11-17)
+
+```text
+Primeira versão. 100% local e gratuita: separa a tinta azul do papel
+(corrigindo sombra e iluminação), remove as linhas das colunas, as áreas
+hachuradas e os traços longos, agrupa os dígitos em códigos e separa dígitos
+encostados testando as divisões possíveis pela confiança da leitura. Cada
+dígito é lido por duas redes neurais próprias (média das duas) e cada código
+é conferido com o banco: leitura que existe sai "ok"; dígito em dúvida é
+ajustado pelo código existente; "1" perdido no começo vira sugestão para
+conferir; código perto de risco/hachura vira "confira"; o resto é "ilegível",
+com a posição para ser circulado na foto. Sobras fora do papel são ignoradas.
+Na folha de teste (102 códigos à mão): cerca de 93% lidos sozinho, nenhum
+erro entre os marcados como "ok".
+```
+
+---
+
+## ocr-digitos-modelos.js
+
+_Redes neurais treinadas do leitor_
+
+### 1.0.0 (2026-11-17)
+
+```text
+Primeira versão. Duas redes (conv 3×3 16 → conv 3×3 32 → densa 64 → 11
+classes: 0–9 e "não é dígito"), treinadas com o MNIST aumentado (rotação,
+inclinação, escala, espessura), "1" sintético em forma de "J", riscos e
+rabiscos, e ajustadas com a caligrafia das listas da loja. Pesos em int8
+(cerca de 150 KB no total).
+```
+
+---
+
+## ferramentas/ocr/
+
+_Scripts de treino do leitor_
+
+### 1.0.0 (2026-11-17)
+
+```text
+Primeira versão: gerar.py (conjunto de treino), treinar.py e treinar_rede.py
+(rede do zero), rotular.js e gerar_reais.py (dígitos reais de uma foto com
+gabarito) e ajustar.py (ajuste fino). Não são usados no dia a dia.
 ```
 
 ---
