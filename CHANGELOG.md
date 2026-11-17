@@ -9,13 +9,13 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.68.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.69.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.11.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.33.0**.
-- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.18.0**.
-- [`ocr-digitos.js`](#ocr-digitosjs): Leitor de códigos escritos à mão numa foto. Versão atual **1.0.0**.
-- [`ocr-digitos-modelos.js`](#ocr-digitos-modelosjs): Redes neurais treinadas do leitor. Versão atual **1.0.0**.
-- [`ferramentas/ocr/`](#ferramentasocr): Scripts de treino do leitor. Versão atual **1.0.0**.
+- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.19.0**.
+- [`ocr-digitos.js`](#ocr-digitosjs): Leitor de códigos escritos à mão numa foto. Versão atual **1.1.0**.
+- [`ocr-digitos-modelos.js`](#ocr-digitos-modelosjs): Redes neurais treinadas do leitor. Versão atual **1.1.0**.
+- [`ferramentas/ocr/`](#ferramentasocr): Scripts de treino do leitor. Versão atual **1.1.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
 - [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.3**.
 - [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. **Removido**.
@@ -27,6 +27,15 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.69.0 (2026-11-17)
+
+```text
+Leitura de códigos por foto: a revisão vem na ordem do que precisa da pessoa
+(primeiro os não lidos, depois "confira", os ajustados pelo estoque e por
+último os lidos com segurança); a numeração na foto segue a mesma ordem.
+Leitor 1.1.0 e redes 1.1.0 (mais precisão, nenhum código esquecido).
+```
 
 ### 5.68.0 (2026-11-17)
 
@@ -994,6 +1003,13 @@ Passa a rodar as verificacoes de integridade
 
 _Suíte de testes_
 
+### 2.19.0 (2026-11-17)
+
+```text
+Testes das hipóteses de divisão do leitor por foto: a divisão que existe no
+banco vence; duas leituras plausíveis que existem → confira. 157 testes.
+```
+
 ### 2.18.0 (2026-11-17)
 
 ```text
@@ -1144,6 +1160,23 @@ Testes de regressão para o bug "Agrupar não
 
 _Leitor de códigos escritos à mão numa foto_
 
+### 1.1.0 (2026-11-17)
+
+```text
+Mais precisão e nenhum código esquecido:
+  - Linhas das colunas tortas também são apagadas (caminho de tinta que pode
+    desviar 1 pixel por linha), e dígitos nunca são juntados através de uma
+    linha apagada (códigos de colunas vizinhas ficavam colados e sumiam).
+  - Decisão por hipóteses: cada glifo largo pode ser 1, 2 ou 3 dígitos;
+    todas as combinações são lidas e vence a leitura mais provável que
+    existe no banco. Duas leituras plausíveis que existem → "confira".
+  - Códigos escritos sem tirar a caneta (um glifo só, largo) e perto da
+    borda da foto não são mais descartados; palavras com mais de 6 glifos
+    são divididas no maior vão; código de 1–2 dígitos nunca sai "certo".
+Medido em 3 fotos reais (266 códigos), cada folha com redes que não a
+viram: 97,5% a 100% lidos sozinho, nenhum erro entre os "certos".
+```
+
 ### 1.0.0 (2026-11-17)
 
 ```text
@@ -1166,6 +1199,13 @@ erro entre os marcados como "ok".
 
 _Redes neurais treinadas do leitor_
 
+### 1.1.0 (2026-11-17)
+
+```text
+Redes ajustadas com a caligrafia de 3 folhas reais (1.127 dígitos rotulados,
+com aumento), além do MNIST e das amostras sintéticas.
+```
+
 ### 1.0.0 (2026-11-17)
 
 ```text
@@ -1181,6 +1221,13 @@ rabiscos, e ajustadas com a caligrafia das listas da loja. Pesos em int8
 ## ferramentas/ocr/
 
 _Scripts de treino do leitor_
+
+### 1.1.0 (2026-11-17)
+
+```text
+rotular.js lê cada palavra com os modelos atuais e a alinha ao gabarito da
+coluna por distância de edição (números riscados e textos são pulados).
+```
 
 ### 1.0.0 (2026-11-17)
 
