@@ -5,12 +5,13 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.69.0
+ * @version 5.70.0
  * @changelog
- *   5.69.0 - 2026-11-17 - Leitura de códigos por foto: a revisão vem na ordem
- *     do que precisa da pessoa (não lidos, "confira", ajustados pelo estoque
- *     e, por último, lidos com segurança); a numeração na foto segue a mesma
- *     ordem. Leitor e redes 1.1.0.
+ *   5.70.0 - 2026-11-17 - Leitura de códigos por foto: clicar num código
+ *     destaca-o na foto por 3 segundos (o resto escurece e um anel pulsa);
+ *     clicar em outro cancela o destaque atual e destaca o novo. Código lido
+ *     com segurança mas fora do estoque aparece como "confira". Leitor e
+ *     redes 1.2.0 (só números).
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).
@@ -5536,6 +5537,8 @@ function _ocrAbrirModal() {
     if (ov) ov.classList.add('on');
 }
 function _ocrFechar() {
+    _ocr.animId = (_ocr.animId || 0) + 1;
+    if (_ocr.animRaf) { cancelAnimationFrame(_ocr.animRaf); _ocr.animRaf = 0; }
     var ov = document.getElementById('ocrOv');
     if (ov) ov.classList.remove('on');
 }
@@ -5643,9 +5646,11 @@ function _ocrMontarLista() {
         inp.value = c.status === 'ilegivel' ? '' : c.texto;
         inp.placeholder = c.status === 'ilegivel' ? 'digite' : '';
         var stx = document.createElement('span'); stx.className = 'ocr-st';
-        stx.textContent = OCR_STATUS_TXT[c.status] + (c.status === 'corrigido' && c.alternativas && c.alternativas[0] ? ' (lido ' + c.alternativas[0] + ')' : '');
+        stx.textContent = c.foraDoEstoque ? 'confira: lido, mas n\u00e3o est\u00e1 no estoque'
+            : OCR_STATUS_TXT[c.status] + (c.status === 'corrigido' && c.alternativas && c.alternativas[0] ? ' (lido ' + c.alternativas[0] + ')' : '');
         stx.title = stx.textContent;
         inp.addEventListener('focus', function() { _ocrSelecionar(i, false); });
+        inp.addEventListener('click', function(ev) { ev.stopPropagation(); _ocrSelecionar(i, false); });
         inp.addEventListener('input', function() { if (inp.value.trim()) chk.checked = true; });
         linha.addEventListener('click', function() { _ocrSelecionar(i, false); });
         linha.appendChild(chk); linha.appendChild(n); linha.appendChild(inp); linha.appendChild(stx);
@@ -5665,9 +5670,50 @@ function _ocrMontarLista() {
     var bt = document.getElementById('ocrAdicionarBtn'); if (bt) bt.disabled = !res.codigos.length;
     if (!res.codigos.length && st) { st.textContent = 'Nenhum código encontrado na foto. Tente uma foto mais nítida, de frente e bem iluminada.'; st.className = 'auto-status er'; }
 }
+// Animação de 3 s em volta do código escolhido, para a pessoa achar rápido na
+// foto. Escolher outro código durante a animação cancela a atual e começa a
+// nova no código novo.
+var OCR_ANIM_MS = 3000;
+function _ocrAnimar(i) {
+    if (_ocr.animRaf) { cancelAnimationFrame(_ocr.animRaf); _ocr.animRaf = 0; }
+    var inicio = (window.performance && performance.now) ? performance.now() : Date.now();
+    var id = (_ocr.animId || 0) + 1;
+    _ocr.animId = id;
+    function quadro(agora) {
+        if (_ocr.animId !== id) return;                 // outra animação começou
+        var t = (agora || Date.now()) - inicio;
+        _ocrDesenhar();
+        var c = _ocr.resultado && _ocr.resultado.codigos[i], cv = document.getElementById('ocrCanvas');
+        if (!c || !cv) return;
+        if (t >= OCR_ANIM_MS) { _ocr.animRaf = 0; return; }
+        var e = _ocr.escala, b = c.caixa;
+        var x = b.x * e, y = b.y * e, w = b.w * e, h = b.h * e;
+        var fase = (t % 700) / 700;                       // pulso a cada 0,7 s
+        var folga = 6 + fase * 22, alfa = 1 - fase;
+        var cx = cv.getContext('2d');
+        cx.save();
+        // Escurece o resto da foto e destaca o código.
+        cx.fillStyle = 'rgba(0,0,0,0.35)';
+        cx.fillRect(0, 0, cv.width, cv.height);
+        cx.clearRect(x - 6, y - 6, w + 12, h + 12);
+        cx.drawImage(_ocr.imagem, (x - 6) / e, (y - 6) / e, (w + 12) / e, (h + 12) / e, x - 6, y - 6, w + 12, h + 12);
+        cx.lineWidth = 4;
+        cx.strokeStyle = 'rgba(0,229,255,' + alfa.toFixed(2) + ')';
+        cx.beginPath();
+        cx.ellipse(x + w / 2, y + h / 2, w / 2 + folga, h / 2 + folga, 0, 0, Math.PI * 2);
+        cx.stroke();
+        cx.lineWidth = 3;
+        cx.strokeStyle = '#00e5ff';
+        cx.strokeRect(x - 4, y - 4, w + 8, h + 8);
+        cx.restore();
+        _ocr.animRaf = requestAnimationFrame(quadro);
+    }
+    _ocr.animRaf = requestAnimationFrame(quadro);
+}
 function _ocrSelecionar(i, focar) {
     _ocr.selecionado = i;
     _ocrDesenhar();
+    _ocrAnimar(i);
     var lista = document.getElementById('ocrLista');
     if (lista) Array.prototype.forEach.call(lista.children, function(el) { el.classList.toggle('sel', el.getAttribute('data-i') === String(i)); });
     var c = _ocr.resultado && _ocr.resultado.codigos[i], wrap = document.getElementById('ocrImgWrap'), cv = document.getElementById('ocrCanvas');

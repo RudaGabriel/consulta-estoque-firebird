@@ -9,13 +9,13 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.69.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.70.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.11.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.33.0**.
-- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.19.0**.
-- [`ocr-digitos.js`](#ocr-digitosjs): Leitor de códigos escritos à mão numa foto. Versão atual **1.1.0**.
-- [`ocr-digitos-modelos.js`](#ocr-digitos-modelosjs): Redes neurais treinadas do leitor. Versão atual **1.1.0**.
-- [`ferramentas/ocr/`](#ferramentasocr): Scripts de treino do leitor. Versão atual **1.1.0**.
+- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.20.0**.
+- [`ocr-digitos.js`](#ocr-digitosjs): Leitor de códigos escritos à mão numa foto. Versão atual **1.2.0**.
+- [`ocr-digitos-modelos.js`](#ocr-digitos-modelosjs): Redes neurais treinadas do leitor. Versão atual **1.2.0**.
+- [`ferramentas/ocr/`](#ferramentasocr): Scripts de treino do leitor. Versão atual **1.2.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
 - [`node-firebird.bat`](#node-firebirdbat): Instalador avulso do Node.js e do node-firebird. Versão atual **1.1.3**.
 - [`executavel/construir.js`](#executavelconstruirjs): Gerador do executável único para Windows. **Removido**.
@@ -27,6 +27,16 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.70.0 (2026-11-17)
+
+```text
+Leitura de códigos por foto: clicar num código (ou no campo dele) destaca
+esse código na foto por 3 segundos (o resto escurece e um anel pulsa em
+volta); clicar em outro durante o destaque cancela o atual e destaca o novo.
+Código lido com segurança mas fora do estoque aparece como "confira: lido,
+mas não está no estoque". Leitor e redes 1.2.0 (só números; letras ignoradas).
+```
 
 ### 5.69.0 (2026-11-17)
 
@@ -1003,6 +1013,14 @@ Passa a rodar as verificacoes de integridade
 
 _Suíte de testes_
 
+### 2.20.0 (2026-11-17)
+
+```text
+Leitor por foto: código lido com segurança mas fora do estoque vira
+"confira" (não "não lido"); letra (H deitado) não é lida como número.
+159 testes.
+```
+
 ### 2.19.0 (2026-11-17)
 
 ```text
@@ -1160,6 +1178,15 @@ Testes de regressão para o bug "Agrupar não
 
 _Leitor de códigos escritos à mão numa foto_
 
+### 1.2.0 (2026-11-17)
+
+```text
+Leitura muito segura de um código que não está no estoque carregado (ex.:
+estoque zero ou inativo) vira "confira" com o aviso "fora do estoque", em
+vez de "não lido". Texto solto (letras) sem confirmação no estoque não vira
+código.
+```
+
 ### 1.1.0 (2026-11-17)
 
 ```text
@@ -1199,6 +1226,14 @@ erro entre os marcados como "ok".
 
 _Redes neurais treinadas do leitor_
 
+### 1.2.0 (2026-11-17)
+
+```text
+Só números: as redes aprenderam letras (em pé e deitadas, 16 mil exemplos
+gerados com fontes e deformados como escrita à mão) como "não é número".
+Letras parecidas com números (O, I, S, Z, B, G, J, q, g) ficam de fora.
+```
+
 ### 1.1.0 (2026-11-17)
 
 ```text
@@ -1221,6 +1256,12 @@ rabiscos, e ajustadas com a caligrafia das listas da loja. Pesos em int8
 ## ferramentas/ocr/
 
 _Scripts de treino do leitor_
+
+### 1.2.0 (2026-11-17)
+
+```text
+Novo gerar_letras.py: exemplos de letras como classe "não é número".
+```
 
 ### 1.1.0 (2026-11-17)
 
