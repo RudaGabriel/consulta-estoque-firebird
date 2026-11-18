@@ -3,19 +3,11 @@
  *
  * @author Ruda Gabriel
  *
- * @version 1.1.0
+ * @version 1.2.0
  * @changelog
- *   1.1.0 - 2026-11-17 - Mais precisão e nenhum código esquecido:
- *     - Linhas das colunas tortas também são apagadas (caminho de tinta que
- *       pode desviar 1 pixel por linha), e dígitos nunca são juntados através
- *       de uma linha apagada (códigos de colunas vizinhas ficavam colados).
- *     - Decisão por hipóteses: cada glifo largo pode ser 1, 2 ou 3 dígitos;
- *       todas as combinações são lidas e vence a leitura mais provável que
- *       existe no banco. Duas leituras plausíveis que existem → "confira".
- *     - Códigos escritos sem tirar a caneta (um glifo só, largo) e códigos
- *       perto da borda da foto não são mais descartados; palavras com mais
- *       de 6 glifos são divididas no maior vão; código de 1–2 dígitos nunca
- *       sai como "certo".
+ *   1.2.0 - 2026-11-17 - Só números: leitura muito segura de código fora do
+ *     estoque vira "confira" (aviso "fora do estoque") em vez de "não lido";
+ *     texto solto (letras) sem confirmação no estoque não vira código.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
@@ -657,6 +649,12 @@
                 return { texto: c1, confianca: conf(cands[j2]) * 0.8, status: "duvida", alternativas: [cands[j2].txt] };
             }
         }
+        // Leitura muito segura de um código que não está no estoque carregado
+        // (ex.: produto com estoque zero ou inativo): mostra o que leu, para
+        // conferir — não esconde como "não lido".
+        if (conf(top) >= 0.85 && top.txt.length >= 3 && lixo < 0.5) {
+            return { texto: top.txt, confianca: conf(top), status: "duvida", foraDoEstoque: true, alternativas: alternativas };
+        }
         return { texto: top.txt, confianca: conf(top), status: "ilegivel", alternativas: alternativas };
     }
     // Compatível com a versão anterior: uma hipótese só.
@@ -736,7 +734,7 @@
                             if ((p.naBorda || p.tamColuna < 3) && dec.status !== "ok" && dec.status !== "corrigido") continue;
                             codigos.push({
                                 texto: dec.texto, confianca: Math.round(dec.confianca * 1000) / 1000,
-                                status: dec.status, alternativas: dec.alternativas,
+                                status: dec.status, alternativas: dec.alternativas, foraDoEstoque: !!dec.foraDoEstoque,
                                 caixa: { x: Math.round(p.x * inv), y: Math.round(p.y * inv), w: Math.round(p.w * inv), h: Math.round(p.h * inv) }
                             });
                         }

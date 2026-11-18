@@ -36,10 +36,15 @@ for ep in range(epocas):
     with torch.no_grad(): acc=(m(Xv).argmax(1)==Yv).float().mean().item()
     print('época',ep+1,'val',round(acc*100,2),'%',round(time.time()-t0),'s', flush=True)
 # MNIST teste (formato original) — referência
-xt=np.fromfile(sys.argv[1].replace('treino.npz','t10k-images-idx3-ubyte'),dtype=np.uint8)[16:].reshape(-1,1,28,28)/255.
-yt=np.fromfile(sys.argv[1].replace('treino.npz','t10k-labels-idx1-ubyte'),dtype=np.uint8)[8:]
-with torch.no_grad(): p=m(torch.tensor(xt,dtype=torch.float32)).argmax(1).numpy()
-print('MNIST teste (original):', round((p==yt).mean()*100,2),'%')
+import os
+try:
+    pasta=os.path.dirname(os.path.abspath(sys.argv[1]))
+    xt=np.fromfile(os.path.join(pasta,'t10k-images-idx3-ubyte'),dtype=np.uint8)[16:].reshape(-1,1,28,28)/255.
+    yt=np.fromfile(os.path.join(pasta,'t10k-labels-idx1-ubyte'),dtype=np.uint8)[8:]
+    with torch.no_grad(): p=m(torch.tensor(xt,dtype=torch.float32)).argmax(1).numpy()
+    print('MNIST teste (original):', round((p==yt).mean()*100,2),'%')
+except Exception as e:
+    print('MNIST teste não avaliado:', e)
 # Exporta em int8 por tensor
 tens=[]; dados=bytearray()
 for nome,t in [('c1w',m.c1.weight),('c1b',m.c1.bias),('c2w',m.c2.weight),('c2b',m.c2.bias),('d1w',m.d1.weight),('d1b',m.d1.bias),('d2w',m.d2.weight),('d2b',m.d2.bias)]:

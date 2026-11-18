@@ -135,9 +135,9 @@ Em vez de digitar, você pode **fotografar uma folha com os códigos escritos à
    - **Azul:** um dígito estava em dúvida e foi ajustado pelo código que existe no estoque.
    - **Amarelo:** confira (leitura incerta, código fora do estoque ou perto de um risco/hachura, onde um dígito pode ter se perdido).
    - **Círculo vermelho:** não foi possível ler. Digite o código no campo ao lado, olhando o círculo na foto.
-3. Clique num código da lista para vê-lo destacado na foto. Corrija o que for preciso e clique em **Adicionar à lista**. Códigos que já estão na lista não são repetidos. Depois, clique em **Salvar lista**.
+3. Clique num código da lista (ou no campo dele) e a foto **destaca esse código por 3 segundos**: o resto escurece e um anel pulsa em volta, para você achar na hora. Clicar em outro código durante o destaque passa para o novo. Corrija o que for preciso e clique em **Adicionar à lista**. Códigos que já estão na lista não são repetidos. Depois, clique em **Salvar lista**.
 
-A leitura é **gratuita e funciona sem internet**: roda no próprio navegador, com redes neurais de dígitos treinadas para este sistema (inclusive com o "1" escrito em forma de "J"). Nenhuma foto sai do computador. Para o melhor resultado, fotografe de frente, com boa luz e a folha inteira. Números riscados, pontos e as linhas das colunas são ignorados. Formatos aceitos: JPG e PNG (fotos HEIC do iPhone precisam ser convertidas).
+A leitura é **gratuita e funciona sem internet**: roda no próprio navegador, com redes neurais de dígitos treinadas para este sistema (inclusive com o "1" escrito em forma de "J"). Nenhuma foto sai do computador. Para o melhor resultado, fotografe de frente, com boa luz e a folha inteira. Só números são lidos: letras e palavras (como um título escrito na folha, mesmo de lado), números riscados, pontos e as linhas das colunas são ignorados. Um código lido com segurança que não está no estoque carregado (por exemplo, com estoque zero) aparece em amarelo como **"lido, mas não está no estoque"**, para você decidir. Formatos aceitos: JPG e PNG (fotos HEIC do iPhone precisam ser convertidas).
 
 **Precisão medida** em 3 fotos de listas reais (266 códigos escritos à mão), testando cada folha com redes que **não a tinham visto** no treino: de **97,5% a 100%** dos códigos lidos sozinhos, e **nenhum código marcado em verde estava errado**. O restante aparece em amarelo ou circulado, para você conferir. Cada código da folha recebe um número; nada é pulado sem aviso.
 
@@ -303,7 +303,7 @@ node validar-client.js             # sintaxe do JavaScript da interface
 node --test consulta-estoque_test.js
 ```
 
-A suíte tem **157 testes** e cobre o motor de cálculo e o servidor. No servidor, testa a leitura da configuração, a lista personalizada, o SQL gerado, o processamento do estoque e a carga com um **Firebird simulado**. Ela **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
+A suíte tem **159 testes** e cobre o motor de cálculo e o servidor. No servidor, testa a leitura da configuração, a lista personalizada, o SQL gerado, o processamento do estoque e a carga com um **Firebird simulado**. Ela **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
 
 ---
 

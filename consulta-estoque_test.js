@@ -5,11 +5,11 @@
  *
  * @author Ruda Gabriel
  *
- * @version 2.19.0
+ * @version 2.20.0
  * @changelog
- *   2.19.0 - 2026-11-17 - Testes das hipóteses de divisão do leitor por foto
- *     (a divisão que existe no banco vence; duas plausíveis → confira).
- *     157 testes.
+ *   2.20.0 - 2026-11-17 - Leitor por foto: código lido com segurança mas fora
+ *     do estoque vira "confira" (não "não lido"); letra (H deitado) não é
+ *     lida como número. 159 testes.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * EXECUÇÃO:
@@ -794,9 +794,25 @@ describe("leitura de códigos por foto (ocr-digitos.js)", () => {
         ], t => t === "1032" || t === "10132");
         assert.equal(r.status, "duvida");
     });
-    test("_decidirCodigo: nada parecido no banco → ilegível", () => {
-        const r = OCR._decidirCodigo([certo(7), certo(7), certo(7)], () => false);
+    test("_decidirCodigo: leitura segura de código fora do estoque → confira (não some como ilegível)", () => {
+        const r = OCR._decidirCodigo([certo(7), certo(0), certo(6), certo(9)], () => false);
+        assert.equal(r.status, "duvida");
+        assert.equal(r.foraDoEstoque, true);
+        assert.equal(r.texto, "7069");
+    });
+    test("_decidirCodigo: leitura fraca e nada parecido no banco → ilegível", () => {
+        const fraco = d => { const p = new Float32Array(11).fill(0.05); p[d] = 0.5; return p; };
+        const r = OCR._decidirCodigo([fraco(7), fraco(7), fraco(7)], () => false);
         assert.equal(r.status, "ilegivel");
+    });
+    test("rede: letra (H deitado) não é lida como número", () => {
+        const m = OCR._carregarModelo(OCR.MODELOS[0]);
+        const h = new Float32Array(784);
+        // "H" deitado: duas barras horizontais ligadas por uma vertical
+        for (let x = 4; x < 24; x++) { h[8 * 28 + x] = 1; h[9 * 28 + x] = 1; h[19 * 28 + x] = 1; h[20 * 28 + x] = 1; }
+        for (let y = 8; y < 21; y++) { h[y * 28 + 13] = 1; h[y * 28 + 14] = 1; }
+        const p = OCR._classificar(m, h);
+        assert.equal(p.indexOf(Math.max(...p)), 10);
     });
     test("lerImagem: folha em branco não tem códigos; imagem inválida é recusada", async () => {
         const W = 200, H = 150, d = new Uint8ClampedArray(W * H * 4).fill(235);
