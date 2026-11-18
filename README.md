@@ -1,46 +1,94 @@
-# Consulta de Estoque
+<div align="center">
 
-> **Autor: Ruda Gabriel** — idealização, desenvolvimento e manutenção. Projeto autônomo e independente.
+# 📦 Consulta de Estoque
 
-Sistema web local para **consultar o estoque disponível** de um **ERP** com banco **Firebird `.FDB`** e **montar combinações de produtos que somam um valor em reais**, com controle de itens já usados.
+### Consulta do estoque disponível de um ERP com banco Firebird, com combinações de produtos que somam um valor em R$, Modo Automático e leitura de listas escritas à mão por foto
 
-Ele roda num PC da loja e é acessado pelo navegador, nessa máquina ou em qualquer outra da mesma rede. **Nunca escreve no banco do ERP:** só lê.
+<img alt="sistema: v5.70.0" src="https://img.shields.io/badge/sistema-v5.70.0-2563EB?style=flat">
+<img alt="plataforma: Windows" src="https://img.shields.io/badge/plataforma-Windows%20%28servidor%29%20%C2%B7%20qualquer%20navegador-0078D4?style=flat&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nd2hpdGUnPjxyZWN0IHg9JzMnIHk9JzMnIHdpZHRoPSc4JyBoZWlnaHQ9JzgnLz48cmVjdCB4PScxMycgeT0nMycgd2lkdGg9JzgnIGhlaWdodD0nOCcvPjxyZWN0IHg9JzMnIHk9JzEzJyB3aWR0aD0nOCcgaGVpZ2h0PSc4Jy8%2BPHJlY3QgeD0nMTMnIHk9JzEzJyB3aWR0aD0nOCcgaGVpZ2h0PSc4Jy8%2BPC9zdmc%2B&logoColor=white">
+<img alt="idioma: pt-BR" src="https://img.shields.io/badge/idioma-pt--BR-16A34A?style=flat">
+<img alt="banco: somente leitura" src="https://img.shields.io/badge/banco-somente%20leitura-DC2626?style=flat&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nbm9uZScgc3Ryb2tlPSd3aGl0ZScgc3Ryb2tlLXdpZHRoPScyLjInIHN0cm9rZS1saW5lY2FwPSdyb3VuZCcgc3Ryb2tlLWxpbmVqb2luPSdyb3VuZCc%2BPHBhdGggZD0nTTEyIDIyczgtNCA4LTEwVjVsLTgtMy04IDN2N2MwIDYgOCAxMCA4IDEweicvPjxwYXRoIGQ9J205IDEyIDIgMiA0LTQnLz48L3N2Zz4%3D&logoColor=white">
+<img alt="funciona: sem internet" src="https://img.shields.io/badge/funciona-sem%20internet-0891B2?style=flat">
+<img alt="testes: 159 passando" src="https://img.shields.io/badge/testes-159%20passando-22C55E?style=flat&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nbm9uZScgc3Ryb2tlPSd3aGl0ZScgc3Ryb2tlLXdpZHRoPScyLjInIHN0cm9rZS1saW5lY2FwPSdyb3VuZCcgc3Ryb2tlLWxpbmVqb2luPSdyb3VuZCc%2BPHBhdGggZD0nTTkgMnY2TDQgMTlhMiAyIDAgMCAwIDEuOCAzaDEyLjRhMiAyIDAgMCAwIDEuOC0zTDE1IDhWMicvPjxwYXRoIGQ9J004IDJoOCcvPjxwYXRoIGQ9J003IDE1aDEwJy8%2BPC9zdmc%2B&logoColor=white">
+<img alt="licença: proprietária" src="https://img.shields.io/badge/licen%C3%A7a-propriet%C3%A1ria-6B7280?style=flat">
 
----
+<img alt="Node.js: 18+" src="https://img.shields.io/badge/Node.js-18%2B-339933?style=flat&logo=nodedotjs&logoColor=white">
+<img alt="JavaScript: sem framework" src="https://img.shields.io/badge/JavaScript-sem%20framework-F7DF1E?style=flat&logo=javascript&logoColor=black">
+<img alt="HTML5" src="https://img.shields.io/badge/HTML5-interface%20web-E34F26?style=flat&logo=html5&logoColor=white">
+<img alt="CSS" src="https://img.shields.io/badge/CSS-tema%20escuro-1572B6?style=flat&logo=css&logoColor=white">
+<img alt="Firebird: ERP" src="https://img.shields.io/badge/Firebird-banco%20do%20ERP-B71C1C?style=flat&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nbm9uZScgc3Ryb2tlPSd3aGl0ZScgc3Ryb2tlLXdpZHRoPScyLjInIHN0cm9rZS1saW5lY2FwPSdyb3VuZCcgc3Ryb2tlLWxpbmVqb2luPSdyb3VuZCc%2BPGVsbGlwc2UgY3g9JzEyJyBjeT0nNScgcng9JzknIHJ5PSczJy8%2BPHBhdGggZD0nTTMgNXYxNGE5IDMgMCAwIDAgMTggMFY1Jy8%2BPHBhdGggZD0nTTMgMTJhOSAzIDAgMCAwIDE4IDAnLz48L3N2Zz4%3D&logoColor=white">
+<img alt="node-firebird" src="https://img.shields.io/badge/node--firebird-driver-CB3837?style=flat&logo=npm&logoColor=white">
+<img alt="Server-Sent Events" src="https://img.shields.io/badge/SSE-tempo%20real-7C3AED?style=flat">
+<img alt="Redes neurais: leitor por foto" src="https://img.shields.io/badge/redes%20neurais-leitor%20por%20foto%2C%20offline-DB2777?style=flat">
+<img alt="PyTorch: treino" src="https://img.shields.io/badge/PyTorch-treino%20das%20redes-EE4C2C?style=flat&logo=pytorch&logoColor=white">
+<img alt="node:test" src="https://img.shields.io/badge/node%3Atest-testes%20nativos-5FA04E?style=flat&logo=nodedotjs&logoColor=white">
+<img alt="Playwright: teste da tela" src="https://img.shields.io/badge/Playwright-teste%20da%20tela-2EAD33?style=flat&logo=playwright&logoColor=white">
 
-## Sumário
+**Estoque em tempo real na rede da loja · Combinações que fecham o valor (Agrupar e Combinar) · Modo Automático para listas inteiras · Lista personalizada com leitura por foto · Acha o banco sozinho na rede · Nunca escreve no banco · Grátis e sem internet**
 
-- [O que o sistema faz](#o-que-o-sistema-faz)
-- [Funcionalidades da interface](#funcionalidades-da-interface)
-- [Modo Automático](#modo-automático)
-- [Lista personalizada](#lista-personalizada)
-- [Como o estoque é lido do banco](#como-o-estoque-é-lido-do-banco)
-- [Requisitos](#requisitos)
-- [Instalação e uso](#instalação-e-uso)
-- [Configuração (`config.json`)](#configuração-configjson)
-- [Arquivos do projeto](#arquivos-do-projeto)
-- [Arquivos gerados em uso](#arquivos-gerados-em-uso)
-- [API HTTP](#api-http)
-- [Testes e verificações](#testes-e-verificações)
-- [Segurança](#segurança)
-- [Solução de problemas](#solução-de-problemas)
-- [Histórico de versões](#histórico-de-versões)
-- [Créditos](#créditos)
+[Instalar](#instalacao) · [Usar](#uso) · [Modo Automático](#automatico) · [Lista personalizada](#lista) · [Leitura por foto](#foto) · [Banco](#banco) · [Configurar](#configuracao) · [Arquivos](#arquivos) · [API](#api) · [Segurança](#seguranca) · [Problemas](#problemas)
 
----
-
-## O que o sistema faz
-
-1. **Conecta no Firebird** do ERP. Ele encontra o banco sozinho, **sempre pela rede primeiro**: usa o `config.json`, lê os `.ini` e atalhos do ERP, procura o servidor da rede (pelo nome e pela varredura da porta 3050) e, **só por último**, o Firebird desta máquina. Detalhes em [Como o estoque é lido do banco](#como-o-estoque-é-lido-do-banco).
-2. **Detecta a tabela de produtos** e as colunas de código, descrição, estoque, código de barras, preço, última venda e situação (ativo/inativo), sem precisar configurar nomes de colunas.
-3. **Lista só os itens com estoque real (> 0)**, sem os inativos e sem os termos **proibidos** que você configurar (marcas, categorias ou itens que não devem ser sugeridos).
-4. **Monta combinações de produtos** que somam um valor-alvo. Isso serve para fechar valores de cartão, crédito, PIX ou entregas com itens que realmente existem em estoque.
-5. **Controla os "usados":** um item marcado como usado vai para o fim da fila e não é sugerido de novo até a fila ser limpa. Esse estado fica gravado em disco e é compartilhado entre todos os PCs que acessam o sistema.
-6. **Atualiza todas as abas abertas em tempo real**, por Server-Sent Events (SSE), quando os dados mudam.
+</div>
 
 ---
 
-## Funcionalidades da interface
+## O que é
+
+Um sistema web que roda **num PC da loja** e é aberto **pelo navegador**, nesse computador ou em qualquer outro da mesma rede. Ele lê o estoque do banco Firebird do ERP e ajuda a **montar combinações de produtos que somam um valor em reais**, para fechar valores de cartão, crédito, PIX ou entregas com itens que realmente existem em estoque.
+
+| | |
+|---|---|
+| 📊 **Estoque disponível** | Só itens com estoque real (> 0), sem inativos e sem os termos **proibidos** que você configurar. Colunas de código, descrição, estoque, código de barras, preço e última venda detectadas sozinhas. |
+| 🧮 **Agrupar e Combinar** | Pares e trios de itens diferentes, ou combinações repetindo o mesmo item, que somam o valor procurado (até + R$ 40), respeitando o estoque mínimo. |
+| ⚡ **Modo Automático** | Processa uma lista inteira de pedidos de uma vez, pelo preço de venda ou pelo **custo de compra + 10%**, descontando o que cada linha já usou. Confere listas já preenchidas e só refaz o que mudou. |
+| 📝 **Lista personalizada** | Códigos fixos com estoque de parada, guardados no servidor e iguais em todos os PCs, com alertas de código esgotado, inativo ou excluído. |
+| 📷 **Leitura por foto** | Fotografe uma folha com códigos escritos à mão e a lista se preenche sozinha, com revisão na foto numerada. Grátis, sem internet, nenhuma foto sai do computador. |
+| ✅ **Controle de usados** | Item usado vai para o fim da fila e não é sugerido de novo até a fila ser limpa; o estado é compartilhado entre todos os PCs. |
+| 🌐 **Acha o banco sozinho** | Procura o servidor **pela rede primeiro** e só por último o Firebird desta máquina. |
+| 🔄 **Tempo real** | Todas as abas abertas se atualizam sozinhas (Server-Sent Events) quando os dados mudam. |
+| 🔒 **Somente leitura** | Nunca grava nada no banco do ERP. |
+
+<a id="instalacao"></a>
+
+## 🚀 Instalação
+
+> **Requisitos:** Windows (o inicializador `.bat` é para Windows; o servidor em si roda em qualquer sistema com Node.js) · **Node.js 18 ou mais novo** (o `.bat` instala o Node 22 LTS sozinho se não houver nenhum) · módulo **`node-firebird`** (também instalado pelo `.bat`) · acesso de rede ao servidor Firebird (porta **3050** por padrão).
+
+1. Copie os arquivos do projeto para uma pasta do PC que vai rodar o servidor.
+2. Dê dois cliques em **`consulta-estoque.bat`**. Ele:
+   - instala o Node.js, se necessário (pede permissão de administrador);
+   - instala o `node-firebird`, tentando primeiro o cache local e depois a internet;
+   - lê a porta do `config.json` (padrão **7888**);
+   - roda as verificações de integridade e os testes; se algo falhar, avisa e segue sozinho em 5 segundos;
+   - se já houver um servidor antigo na porta, encerra-o sozinho sem perder dados;
+   - inicia o servidor e **abre o navegador** em `http://localhost:7888`;
+   - se o servidor cair, **reinicia sozinho** (até 5 vezes seguidas).
+
+   **Não é preciso apertar nada na janela.** Em erro grave (Node.js ausente, porta ocupada por outro programa), a mensagem fica na tela e a janela fecha sozinha em 60 segundos.
+3. Nos outros PCs da rede, acesse `http://IP-DO-SERVIDOR:7888`.
+4. Para encerrar, pressione **0** na janela do `.bat`. Os dados pendentes são gravados antes de sair. **Ctrl+C** e fechar a janela também gravam antes de sair.
+
+Também é possível iniciar manualmente:
+
+```bash
+npm install node-firebird
+node consulta-estoque.js
+```
+
+<details>
+<summary><b>🖼️ Ícone da aba (favicon)</b></summary>
+
+Para trocar o ícone que aparece na aba do navegador, coloque um arquivo chamado **`favicon`** na mesma pasta do `consulta-estoque.js`. Formatos aceitos: `.ico`, `.png`, `.svg`, `.webp`, `.jpg`, `.jpeg` ou `.gif`, com até 1 MB. Não é preciso configurar nada nem reiniciar o servidor: basta recarregar a página. Se houver mais de um, vale o primeiro desta ordem: `.ico`, `.png`, `.svg`, `.webp`, `.jpg`, `.jpeg`, `.gif`. Sem o arquivo, o navegador usa o ícone padrão.
+
+</details>
+
+> 💡 O `node-firebird.bat` é um instalador avulso, só do Node.js e do módulo `node-firebird`, útil para preparar a máquina sem iniciar o servidor.
+
+---
+
+<a id="uso"></a>
+
+## 🖥️ Uso no dia a dia
 
 | Recurso | Descrição |
 |---|---|
@@ -59,7 +107,9 @@ Ele roda num PC da loja e é acessado pelo navegador, nessa máquina ou em qualq
 
 ---
 
-## Modo Automático
+<a id="automatico"></a>
+
+## ⚡ Modo Automático
 
 Processa uma **lista inteira de valores** de uma vez. Cole linhas no formato:
 
@@ -109,7 +159,9 @@ Opções:
 
 ---
 
-## Lista personalizada
+<a id="lista"></a>
+
+## 📝 Lista personalizada
 
 É uma lista fixa de códigos (até **1.000**) que o Modo Automático pode usar com prioridade, **mesmo que estejam abaixo do estoque mínimo ou fora do limite de itens carregados**.
 
@@ -125,7 +177,9 @@ Opções:
 
   O alerta de "não existe mais no banco" só aparece quando o servidor **confirmou** a consulta de todos os códigos. Uma falha de rede ou de banco nunca gera esse alerta.
 
-### Ler códigos de uma foto
+<a id="foto"></a>
+
+## 📷 Leitura de códigos por foto
 
 Em vez de digitar, você pode **fotografar uma folha com os códigos escritos à mão** (em colunas, como numa lista de papel) e o sistema preenche a lista sozinho.
 
@@ -145,7 +199,9 @@ Por que não usar um leitor de texto pronto (como o Tesseract): testado nas mesm
 
 ---
 
-## Como o estoque é lido do banco
+<a id="banco"></a>
+
+## 🌐 Como o estoque é lido do banco
 
 - **Somente leitura:** as consultas usam transações `READ UNCOMMITTED`, que são sempre desfeitas (rollback) no final, sem bloquear o ERP.
 - **Itens exibidos:** estoque **> 0** (arredondado em 3 casas), descrição preenchida, código único, sem proibidos e sem inativos.
@@ -157,47 +213,9 @@ Por que não usar um leitor de texto pronto (como o Tesseract): testado nas mesm
 
 ---
 
-## Requisitos
+<a id="configuracao"></a>
 
-- **Windows** (o inicializador `.bat` é para Windows; o servidor em si roda em qualquer sistema com Node.js).
-- **Node.js 18 ou superior**. O `.bat` instala o Node 22 LTS automaticamente se não houver nenhum instalado.
-- Módulo **`node-firebird`** (instalado automaticamente pelo `.bat`).
-- Acesso de rede ao servidor Firebird (porta **3050** por padrão).
-
----
-
-## Instalação e uso
-
-1. Copie os arquivos do projeto para uma pasta do PC que vai rodar o servidor.
-2. Dê dois cliques em **`consulta-estoque.bat`**. Ele:
-   - instala o Node.js, se necessário (pede permissão de administrador);
-   - instala o `node-firebird`, tentando primeiro o cache local e depois a internet;
-   - lê a porta do `config.json` (padrão **7888**);
-   - roda as verificações de integridade e os testes; se algo falhar, avisa e segue sozinho em 5 segundos;
-   - se já houver um servidor antigo na porta, encerra-o sozinho sem perder dados;
-   - inicia o servidor e **abre o navegador** em `http://localhost:7888`;
-   - se o servidor cair, **reinicia sozinho** (até 5 vezes seguidas).
-
-   **Não é preciso apertar nada na janela.** Em erro grave (Node.js ausente, porta ocupada por outro programa), a mensagem fica na tela e a janela fecha sozinha em 60 segundos.
-3. Nos outros PCs da rede, acesse `http://IP-DO-SERVIDOR:7888`.
-4. Para encerrar, pressione **0** na janela do `.bat`. Os dados pendentes são gravados antes de sair. **Ctrl+C** e fechar a janela também gravam antes de sair.
-
-Também é possível iniciar manualmente:
-
-```bash
-npm install node-firebird
-node consulta-estoque.js
-```
-
-### Ícone da aba (favicon)
-
-Para trocar o ícone que aparece na aba do navegador, coloque um arquivo chamado **`favicon`** na mesma pasta do `consulta-estoque.js`. Formatos aceitos: `.ico`, `.png`, `.svg`, `.webp`, `.jpg`, `.jpeg` ou `.gif`, com até 1 MB. Não é preciso configurar nada nem reiniciar o servidor: basta recarregar a página. Se houver mais de um, vale o primeiro desta ordem: `.ico`, `.png`, `.svg`, `.webp`, `.jpg`, `.jpeg`, `.gif`. Sem o arquivo, o navegador usa o ícone padrão.
-
-> O `node-firebird.bat` é um instalador avulso, só do Node.js e do módulo `node-firebird`, útil para preparar a máquina sem iniciar o servidor.
-
----
-
-## Configuração (`config.json`)
+## ⚙️ Configuração
 
 O arquivo é **opcional**: sem ele, o sistema detecta o banco sozinho. Quase todos os campos também podem ser alterados pela tela **Configurações**.
 
@@ -229,15 +247,22 @@ O arquivo é **opcional**: sem ele, o sistema detecta o banco sozinho. Quase tod
 | `maxItens` | `2000` | Itens enviados à interface, de 100 a 20.000. |
 | `proibidos` | `[]` | Termos a excluir das sugestões (a lista de fábrica é vazia). |
 
-### Padrão de fábrica
+<details>
+<summary><b>Padrão de fábrica</b></summary>
 
 O código não traz nenhum dado de loja: nome da aplicação genérico (`Consulta de Estoque`), host `127.0.0.1` com detecção automática, lista de proibidos vazia e exemplos sem nomes reais. Tudo o que é específico de uma loja fica no `config.json`, nos arquivos gerados em uso e nunca no código. Para **voltar ao padrão de fábrica**, apague `config.json`, `usados-estoque.json` e `lista-personalizada.json` com o servidor parado.
 
 Arquivos com BOM ou com números escritos com zero à esquerda (ex.: `03050`) são aceitos. Ao salvar, os campos de outros módulos que existirem no arquivo são **preservados**.
 
+</details>
+
 ---
 
-## Arquivos do projeto
+<a id="arquivos"></a>
+
+## 📁 Arquivos
+
+### Do projeto
 
 | Arquivo | Função |
 |---|---|
@@ -253,9 +278,7 @@ Arquivos com BOM ou com números escritos com zero à esquerda (ex.: `03050`) s�
 | `ferramentas/ocr/` | Scripts para treinar de novo as redes do leitor (Python + PyTorch). Não são usados no dia a dia. |
 | `CLAUDE.md` | Regras do projeto para manutenção com o Claude (idioma, créditos, neutralidade, conferência de informações desatualizadas). |
 
----
-
-## Arquivos gerados em uso
+### Gerados em uso
 
 Ficam na mesma pasta do servidor:
 
@@ -272,7 +295,12 @@ A gravação é **atômica**: o arquivo é escrito por inteiro antes de substitu
 
 ---
 
-## API HTTP
+<a id="api"></a>
+
+## 🔌 API HTTP
+
+<details>
+<summary><b>Rotas do servidor</b></summary>
 
 | Método | Rota | Descrição |
 |---|---|---|
@@ -293,9 +321,30 @@ A gravação é **atômica**: o arquivo é escrito por inteiro antes de substitu
 
 Todo `POST` exige o cabeçalho `X-Requested-With: XMLHttpRequest`, uma proteção contra sites externos que tentem enviar comandos pelo navegador.
 
+</details>
+
 ---
 
-## Testes e verificações
+## 🧰 Tecnologias e bibliotecas
+
+Uma única biblioteca no servidor (`node-firebird`); o resto é o próprio Node.js e o navegador.
+
+| Parte | Tecnologia | Versão | Para quê |
+|---|---|---|---|
+| Servidor | [Node.js](https://nodejs.org) | 18 ou mais novo (o `.bat` instala o 22 LTS) | Servidor HTTP, leitura do banco e arquivos de dados |
+| Banco | [node-firebird](https://www.npmjs.com/package/node-firebird) | mais recente (instalado pelo `.bat`) | Driver Firebird em JavaScript puro, em transações somente leitura |
+| Tela | HTML5, CSS e JavaScript sem framework | — | Leve, desenhada aos poucos para não travar com milhares de itens |
+| Tempo real | Server-Sent Events | — | Atualiza todas as abas abertas quando os dados mudam |
+| Motor de cálculo | `estoque-engine.js` | 1.11.0 | Agrupar, Combinar e Modo Automático (embutido no servidor) |
+| Leitura por foto | `ocr-digitos.js` + redes próprias | 1.2.0 | Separação dos números na foto e leitura dos dígitos no navegador, sem internet |
+| Treino das redes | [PyTorch](https://pytorch.org) + [MNIST](https://yann.lecun.com/exdb/mnist/) | — | Scripts de `ferramentas/ocr/` (fora do uso diário) |
+| Inicializador | `consulta-estoque.bat` (Windows) | 5.33.0 | Instala, verifica, inicia, reinicia sozinho e encerra sem perder dados |
+| Testes | `node:test` + `node:assert` | Node 18+ | 159 testes com Firebird simulado |
+| Teste da tela | Playwright | — | Fluxos da interface, Modo Automático e leitura por foto |
+
+---
+
+## 🧪 Testes
 
 ```bash
 node -c consulta-estoque.js        # sintaxe do servidor
@@ -303,11 +352,14 @@ node validar-client.js             # sintaxe do JavaScript da interface
 node --test consulta-estoque_test.js
 ```
 
-A suíte tem **159 testes** e cobre o motor de cálculo e o servidor. No servidor, testa a leitura da configuração, a lista personalizada, o SQL gerado, o processamento do estoque e a carga com um **Firebird simulado**. Ela **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
+- **159 testes**, sem banco real: motor de cálculo, servidor (configuração, lista personalizada, SQL gerado, processamento do estoque e carga com um **Firebird simulado**) e leitor por foto (redes, decisão e conferência com o banco).
+- A suíte **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
 
 ---
 
-## Segurança
+<a id="seguranca"></a>
+
+## 🔒 Segurança
 
 - O servidor fica acessível **na rede local** (`0.0.0.0`) de propósito, para os outros PCs da loja usarem. **Não exponha a porta na internet:** não há login.
 - A senha do Firebird fica em texto no `config.json`. Proteja a pasta do servidor e troque a senha padrão `masterkey`.
@@ -315,7 +367,9 @@ A suíte tem **159 testes** e cobre o motor de cálculo e o servidor. No servido
 
 ---
 
-## Solução de problemas
+<a id="problemas"></a>
+
+## 🛠️ Solução de problemas
 
 | Sintoma | O que verificar |
 |---|---|
@@ -327,22 +381,14 @@ A suíte tem **159 testes** e cobre o motor de cálculo e o servidor. No servido
 
 ---
 
-## Histórico de versões
-
 O histórico completo de cada arquivo está em [`CHANGELOG.md`](CHANGELOG.md). Dentro dos arquivos, o cabeçalho traz apenas o changelog da versão atual.
 
----
+<div align="center">
 
-## Créditos
+**Desenvolvido por [Ruda Gabriel](https://github.com/RudaGabriel)** — idealização, desenvolvimento e manutenção.
 
-| | |
-|---|---|
-| **Autor** | **Ruda Gabriel** |
-| **Papel** | Idealização, desenvolvimento e manutenção do projeto |
-| **GitHub** | [@RudaGabriel](https://github.com/RudaGabriel) |
+O nome do autor aparece também no rodapé da página do sistema, no cabeçalho de cada arquivo (`@author Ruda Gabriel`) e no `CHANGELOG.md`. Projeto **autônomo**: não depende de nenhum outro projeto ou programa do autor e só lê o banco Firebird do ERP.
 
-O nome do autor aparece também no rodapé da página do sistema, no cabeçalho de cada arquivo (`@author Ruda Gabriel`) e no `CHANGELOG.md`.
+© 2026 Ruda Gabriel. Todos os direitos reservados.
 
-Este é um projeto **autônomo**: não depende de nenhum outro projeto ou programa do autor. Só lê o banco Firebird do ERP.
-
-© Ruda Gabriel. Todos os direitos reservados.
+</div>
