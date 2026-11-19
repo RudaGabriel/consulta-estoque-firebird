@@ -814,6 +814,30 @@ describe("leitura de códigos por foto (ocr-digitos.js)", () => {
         const p = OCR._classificar(m, h);
         assert.equal(p.indexOf(Math.max(...p)), 10);
     });
+    test("segmentação: dígito cortado pela borda da foto volta para o código vizinho", () => {
+        const W = 320, H = 240, t = new Float32Array(W * H);
+        const ret = (x0, y0, w, h, cheio) => { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++)
+            if (cheio || x < x0 + 3 || x >= x0 + w - 3 || y < y0 + 3 || y >= y0 + h - 3) t[y * W + x] = 1; };
+        ret(0, 100, 4, 30, true);                                  // "1" rente à borda esquerda
+        [12, 36, 60, 84].forEach(x => ret(x, 100, 18, 30, false));  // "0000"
+        ret(W - 4, 100, 4, 30, true);                              // traço na borda direita, longe de tudo
+        const seg = OCR._segmentar({ W, H }, t);
+        assert.equal(seg.palavras.length, 1);
+        const p = seg.palavras[0];
+        assert.equal(p.cortado, true);
+        assert.equal(p.glifos.length, 5);
+        assert.equal(p.glifosSemCorte.length, 4);
+        assert.equal(p.x, 0);
+    });
+    test("tela: \"Adicionar à lista\" avisa quando há caixas desmarcadas", () => {
+        const src = fsT.readFileSync(require("path").join(__dirname, "consulta-estoque.js"), "utf8");
+        const i = src.indexOf("function _ocrAdicionar()"), f = src.indexOf("function _ocrAdicionarExecutar()");
+        assert.ok(i > 0 && f > i);
+        const corpo = src.slice(i, f);
+        assert.match(corpo, /_modalConfirm\(/);
+        assert.match(corpo, /caixas desmarcadas/);
+        assert.match(corpo, /Prosseguir/);
+    });
     test("lerImagem: folha em branco não tem códigos; imagem inválida é recusada", async () => {
         const W = 200, H = 150, d = new Uint8ClampedArray(W * H * 4).fill(235);
         const r = await OCR.lerImagem({ width: W, height: H, data: d }, {});

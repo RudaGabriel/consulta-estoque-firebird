@@ -5728,7 +5728,39 @@ function _ocrSoDigitos(t) {
     for (var i = 0; i < s.length; i++) { var c = s.charCodeAt(i); if (c >= 48 && c <= 57) out += s.charAt(i); }
     return out;
 }
+// Antes de adicionar: se alguma caixa estiver desmarcada, avisa e pergunta se
+// a pessoa quer prosseguir (os desmarcados ficam de fora da lista).
 function _ocrAdicionar() {
+    var lista = document.getElementById('ocrLista');
+    if (!lista) return;
+    var desmarcados = [], primeiro = -1;
+    Array.prototype.forEach.call(lista.children, function(el) {
+        var chk = el.querySelector('.ocr-chk');
+        if (!chk || chk.checked) return;
+        var inp = el.querySelector('.ocr-inp'), num = el.querySelector('.ocr-n');
+        var cod = _ocrSoDigitos(inp && inp.value);
+        var i = parseInt(el.getAttribute('data-i'), 10);
+        if (primeiro < 0 && !isNaN(i)) primeiro = i;
+        desmarcados.push('N\u00ba ' + (num ? num.textContent : '?') + ': ' + (cod || '(n\u00e3o lido)'));
+    });
+    if (!desmarcados.length) { _ocrAdicionarExecutar(); return; }
+    var n = desmarcados.length;
+    _modalConfirm(
+        (n === 1 ? 'H\u00e1 1 caixa desmarcada. Esse c\u00f3digo n\u00e3o ser\u00e1 adicionado \u00e0 lista:'
+                 : 'H\u00e1 ' + n + ' caixas desmarcadas. Esses c\u00f3digos n\u00e3o ser\u00e3o adicionados \u00e0 lista:'),
+        function() { _ocrAdicionarExecutar(); },
+        function() { if (primeiro >= 0) _ocrSelecionar(primeiro, false); },
+        {
+            tituloHtml: _icons.warn + ' ' + (n === 1 ? 'Caixa desmarcada' : 'Caixas desmarcadas'),
+            itensScroll: desmarcados,
+            msgApos: 'Deseja prosseguir mesmo assim?',
+            cancelLabel: 'Voltar e conferir',
+            okLabel: 'Prosseguir',
+            okClass: 'btn btn-w btn-sm'
+        }
+    );
+}
+function _ocrAdicionarExecutar() {
     var lista = document.getElementById('ocrLista'), ta = document.getElementById('lpTextarea');
     if (!lista || !ta) return;
     var NL = String.fromCharCode(10);

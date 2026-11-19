@@ -300,9 +300,15 @@
         // Pedaço pequeno que sobrou sozinho (ex.: ponto em "66.66") sai, e
         // também o que encosta na borda da foto (objeto cortado, fora do
         // papel) — senão ele arrasta o código vizinho para a borda junto.
+        // Exceção: um glifo do tamanho de um dígito encostado na borda pode ser
+        // o primeiro (ou o último) dígito de um código escrito rente à borda da
+        // foto. Ele fica guardado e só volta se encostar num código (abaixo).
+        var cortados = [];
         glifos = glifos.filter(function (g) {
             if (g.h < Hd * 0.45 && g.w < Hd * 0.45) return false;
-            return !(g.x <= 1 || g.y <= 1 || g.x + g.w >= W - 1 || g.y + g.h >= H - 1);
+            var naBorda = g.x <= 1 || g.y <= 1 || g.x + g.w >= W - 1 || g.y + g.h >= H - 1;
+            if (naBorda && g.h >= Hd * 0.6 && g.h <= Hd * 1.6 && g.w <= Hd * 1.6) cortados.push(g);
+            return !naBorda;
         });
 
         // Palavras (códigos): glifos lado a lado, na mesma altura, com espaço
@@ -362,6 +368,32 @@
             p.glifos.forEach(function (g) { areaG += g.area || 0; caixaG += g.w * g.h; });
             return !caixaG || areaG / caixaG < 0.55;
         }
+
+        // Glifo cortado pela borda da foto, na mesma linha e colado a um código
+        // de 3+ dígitos (ex.: o "1" de "13019" rente à borda): volta para o
+        // código, que fica marcado como "cortado" (nunca sai como "lido com
+        // segurança", porque o dígito pode estar incompleto).
+        cortados.forEach(function (g) {
+            var melhor = null, melhorGap = Infinity;
+            palavras.forEach(function (p) {
+                if (p.glifos.length < 3) return;
+                var sobY = Math.min(p.y + p.h, g.y + g.h) - Math.max(p.y, g.y);
+                if (sobY < Math.min(p.h, g.h) * 0.5) return;
+                var gap = g.x < p.x ? p.x - (g.x + g.w) : g.x - (p.x + p.w);
+                if (gap < -Hd * 0.35 || gap > Hd * 0.75 || gap >= melhorGap) return;
+                var vizinho = g.x < p.x ? p.glifos[0] : p.glifos[p.glifos.length - 1];
+                if (temLinhaEntre(g, vizinho)) return;
+                melhor = p; melhorGap = gap;
+            });
+            if (!melhor) return;
+            if (!melhor.cortado) melhor.glifosSemCorte = melhor.glifos.slice();
+            melhor.glifos.push(g);
+            melhor.glifos.sort(function (q, r) { return q.x - r.x; });
+            var x0 = Math.min(melhor.x, g.x), y0 = Math.min(melhor.y, g.y);
+            var x1 = Math.max(melhor.x + melhor.w, g.x + g.w), y1 = Math.max(melhor.y + melhor.h, g.y + g.h);
+            melhor.x = x0; melhor.y = y0; melhor.w = x1 - x0; melhor.h = y1 - y0;
+            melhor.cortado = true;
+        });
 
         // Código encostado num pedaço descartado: pode ter perdido dígito.
         palavras.forEach(function (p) {
@@ -697,28 +729,40 @@
                     ordem = ordem.concat(c.itens);
                 });
 
+                // Lê uma palavra: hipóteses de divisão → decisão. Restos que a rede
+                // reconhece como "não é dígito" (traço solto, pedaço de hachura)
+                // saem; se sobrar pouco, é rabisco/ilegível.
+                function _lerPalavra(glifos) {
+                    var hips = _hipoteses(glifos, seg, tinta), ilegivel = false;
+                    hips.forEach(function (h, hi) {
+                        var total = h.probs.length;
+                        var limpos = h.probs.filter(function (q) { return q[CLASSE_LIXO] < 0.6; });
+                        var ruim = limpos.length < 2 || (total - limpos.length) * 2 >= total;
+                        if (!ruim) h.probs = limpos;
+                        if (h.probs.length > 7) { h.probs = h.probs.slice(0, 7); ruim = true; }
+                        if (hi === 0) ilegivel = ruim;
+                    });
+                    var dec = _decidirHipoteses(hips, existe);
+                    if (ilegivel) dec.status = "ilegivel";
+                    return { dec: dec, probs: hips[0].probs };
+                }
+                function _confirmada(l) { return l.dec.status === "ok" || l.dec.status === "corrigido"; }
+
                 var codigos = [], idx = 0, inv = 1 / red.escala;
                 function passo() {
                     try {
                         var fim = Math.min(ordem.length, idx + 8);
                         for (; idx < fim; idx++) {
                             var p = ordem[idx];
-                            var hips = _hipoteses(p.glifos, seg, tinta);
-                            // Restos que a rede reconhece como "não é dígito" (traço solto,
-                            // pedaço de hachura) saem; se sobrar pouco, é rabisco/ilegível.
-                            var ilegivel = false;
-                            hips.forEach(function (h, hi) {
-                                var total = h.probs.length;
-                                var limpos = h.probs.filter(function (q) { return q[CLASSE_LIXO] < 0.6; });
-                                var ruim = limpos.length < 2 || (total - limpos.length) * 2 >= total;
-                                if (!ruim) h.probs = limpos;
-                                if (h.probs.length > 7) { h.probs = h.probs.slice(0, 7); ruim = true; }
-                                if (hi === 0) ilegivel = ruim;
-                            });
-                            var probs = hips[0].probs;
-                            var dec = _decidirHipoteses(hips, existe);
-                            if (ilegivel) dec.status = "ilegivel";
-                            else if (p.suspeito && dec.status !== "ilegivel") dec.status = "duvida";
+                            var lp = _lerPalavra(p.glifos);
+                            // Com dígito cortado pela borda: vale a leitura com ele se o
+                            // estoque a confirmar; senão, a leitura sem ele, se confirmada.
+                            if (p.cortado) {
+                                var sem = _lerPalavra(p.glifosSemCorte);
+                                if (!_confirmada(lp) && _confirmada(sem)) lp = sem;
+                            }
+                            var probs = lp.probs, dec = lp.dec;
+                            if ((p.suspeito || p.cortado) && dec.status !== "ilegivel") dec.status = "duvida";
                             // Sobra solta fora das colunas (borda da foto, objeto ao
                             // lado do papel) ou pedaço de 1–2 "dígitos" ilegível:
                             // não é código, então não vira círculo vermelho.
@@ -731,7 +775,8 @@
                             }
                             // Na borda da foto, ou sozinho numa "coluna" de 1–2 itens (texto
                             // solto, letras escritas de lado): só fica se o estoque confirmou.
-                            if ((p.naBorda || p.tamColuna < 3) && dec.status !== "ok" && dec.status !== "corrigido") continue;
+                            // (O código com dígito cortado pela borda fica: ele está numa coluna.)
+                            if (((p.naBorda && !p.cortado) || p.tamColuna < 3) && dec.status !== "ok" && dec.status !== "corrigido") continue;
                             codigos.push({
                                 texto: dec.texto, confianca: Math.round(dec.confianca * 1000) / 1000,
                                 status: dec.status, alternativas: dec.alternativas, foraDoEstoque: !!dec.foraDoEstoque,
