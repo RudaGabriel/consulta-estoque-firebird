@@ -9,11 +9,11 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.70.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.71.0**.
 - [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.11.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.33.0**.
-- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.20.0**.
-- [`ocr-digitos.js`](#ocr-digitosjs): Leitor de códigos escritos à mão numa foto. Versão atual **1.2.0**.
+- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.21.0**.
+- [`ocr-digitos.js`](#ocr-digitosjs): Leitor de códigos escritos à mão numa foto. Versão atual **1.3.0**.
 - [`ocr-digitos-modelos.js`](#ocr-digitos-modelosjs): Redes neurais treinadas do leitor. Versão atual **1.2.0**.
 - [`ferramentas/ocr/`](#ferramentasocr): Scripts de treino do leitor. Versão atual **1.2.0**.
 - [`validar-client.js`](#validar-clientjs): Validador do JavaScript da interface. Versão atual **1.0.0**.
@@ -27,6 +27,16 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.71.0 (2026-11-19)
+
+```text
+Leitura de códigos por foto: ao clicar em "Adicionar à lista" com alguma
+caixa desmarcada, o sistema avisa quantas são, mostra quais (número e
+código) e pergunta se a pessoa quer prosseguir mesmo assim. "Voltar e
+conferir" fecha o aviso e destaca na foto o primeiro código desmarcado;
+"Prosseguir" adiciona só os marcados. Leitor 1.3.0.
+```
 
 ### 5.70.0 (2026-11-17)
 
@@ -1013,6 +1023,14 @@ Passa a rodar as verificacoes de integridade
 
 _Suíte de testes_
 
+### 2.21.0 (2026-11-19)
+
+```text
+Leitor por foto: dígito cortado pela borda da foto volta para o código
+vizinho (e a leitura sem ele continua disponível); "Adicionar à lista"
+avisa quando há caixas desmarcadas. 161 testes.
+```
+
 ### 2.20.0 (2026-11-17)
 
 ```text
@@ -1177,6 +1195,20 @@ Testes de regressão para o bug "Agrupar não
 ## ocr-digitos.js
 
 _Leitor de códigos escritos à mão numa foto_
+
+### 1.3.0 (2026-11-19)
+
+```text
+Dígitos encostados (ex.: "00" de 9007, "06" de 7606): cada glifo largo é
+dividido em três pontos de corte diferentes (menos tinta, menos traços
+cruzados e partes iguais) e fica a leitura mais segura; antes, o corte caía
+dentro de um "0". Glifo bem mais largo que alto deixa de ser lido como um
+dígito só (ex.: "65" escrito sem tirar a caneta). Dígito cortado pela borda
+da foto (ex.: o "1" de 13019) volta para o código; o código fica sempre como
+"confira" e, se o estoque não confirmar a leitura com ele, vale a leitura
+sem ele. Em 10 fotos (837 códigos): de 97,6% para 99,3% lidos sozinhos,
+nenhum código errado marcado como lido com segurança.
+```
 
 ### 1.2.0 (2026-11-17)
 

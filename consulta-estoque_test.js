@@ -5,11 +5,11 @@
  *
  * @author Ruda Gabriel
  *
- * @version 2.20.0
+ * @version 2.21.0
  * @changelog
- *   2.20.0 - 2026-11-17 - Leitor por foto: código lido com segurança mas fora
- *     do estoque vira "confira" (não "não lido"); letra (H deitado) não é
- *     lida como número. 159 testes.
+ *   2.21.0 - 2026-11-19 - Leitor por foto: dígito cortado pela borda da foto
+ *     volta para o código vizinho; "Adicionar à lista" avisa quando há caixas
+ *     desmarcadas. 161 testes.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * EXECUÇÃO:

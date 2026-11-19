@@ -5,13 +5,12 @@
  *
  * @author Ruda Gabriel
  *
- * @version 5.70.0
+ * @version 5.71.0
  * @changelog
- *   5.70.0 - 2026-11-17 - Leitura de códigos por foto: clicar num código
- *     destaca-o na foto por 3 segundos (o resto escurece e um anel pulsa);
- *     clicar em outro cancela o destaque atual e destaca o novo. Código lido
- *     com segurança mas fora do estoque aparece como "confira". Leitor e
- *     redes 1.2.0 (só números).
+ *   5.71.0 - 2026-11-19 - Leitura de códigos por foto: "Adicionar à lista"
+ *     avisa quando há caixas desmarcadas, mostra quais são e pergunta se a
+ *     pessoa quer prosseguir ("Voltar e conferir" leva ao primeiro deles na
+ *     foto). Leitor 1.3.0 (dígitos encostados e cortados pela borda).
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * Servidor de relatório de estoque disponível (Firebird + Node.js).

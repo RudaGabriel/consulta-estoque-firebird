@@ -3,12 +3,12 @@
  *
  * @author Ruda Gabriel
  *
- * @version 1.2.0
+ * @version 1.3.0
  * @changelog
- *   1.2.0 - 2026-11-17 - Só números: leitura muito segura de código fora do
- *     estoque vira "confira" (aviso "fora do estoque") em vez de "não lido";
- *     texto solto (letras) sem confirmação no estoque não vira código.
- * Histórico completo das versões: CHANGELOG.md no repositório.
+ *   1.3.0 - 2026-11-19 - Dígitos encostados: cada glifo largo é dividido em
+ *     três pontos de corte diferentes e fica a leitura mais segura; glifo bem
+ *     mais largo que alto deixa de ser lido como um dígito só. Dígito cortado
+ *     pela borda da foto volta para o código (sempre como "confira").
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * USO (navegador ou Node):
@@ -409,23 +409,41 @@
                  descartados: descartados, palavrasDescartadas: palavrasDescartadas };
     }
 
-    // Divide um glifo largo (dígitos encostados) pelos vales da projeção.
-    function _dividirGlifo(g, seg, nPartes) {
+    // Divide um glifo largo (dígitos encostados) em "nPartes" por cortes
+    // verticais. Variantes do ponto de corte (a leitura escolhe a melhor):
+    //   0: menor quantidade de tinta na coluna (vale da projeção);
+    //   1: menos traços cruzados pela coluna (dentro de um "0" a coluna cruza
+    //      2 traços, na emenda entre dois dígitos encostados, só 1);
+    //   2: partes de larguras iguais.
+    function _dividirGlifo(g, seg, nPartes, variante) {
         var Hd = seg.Hd, partes = nPartes || Math.round(g.w / (Hd * 0.62));
         if (partes < 2) return [g];
         partes = Math.min(partes, 6);
-        var W = seg.W, rot = seg.rotulos, proj = new Float64Array(g.w);
+        var W = seg.W, rot = seg.rotulos, proj = new Float64Array(g.w), tracos = new Float64Array(g.w);
         var ids = {}; g.ids.forEach(function (id) { ids[id] = true; });
-        for (var y = g.y; y < g.y + g.h; y++) for (var x = g.x; x < g.x + g.w; x++) if (ids[rot[y * W + x]]) proj[x - g.x]++;
+        for (var x = g.x; x < g.x + g.w; x++) {
+            var dentro = false;
+            for (var y = g.y; y < g.y + g.h; y++) {
+                var on = !!ids[rot[y * W + x]];
+                if (on) proj[x - g.x]++;
+                if (on && !dentro) tracos[x - g.x]++;
+                dentro = on;
+            }
+        }
         var cortes = [];
         for (var p = 1; p < partes; p++) {
             var alvo = Math.round(g.w * p / partes), janela = Math.round(g.w / partes / 2.5), melhor = alvo, val = Infinity;
-            for (var c = Math.max(1, alvo - janela); c <= Math.min(g.w - 2, alvo + janela); c++) if (proj[c] < val) { val = proj[c]; melhor = c; }
+            if (variante !== 2) {
+                for (var c = Math.max(1, alvo - janela); c <= Math.min(g.w - 2, alvo + janela); c++) {
+                    var custo = variante === 1 ? tracos[c] * 1000 + proj[c] + Math.abs(c - alvo) * 0.01 : proj[c];
+                    if (custo < val) { val = custo; melhor = c; }
+                }
+            }
             cortes.push(melhor);
         }
         var res = [], ini = 0;
         cortes.concat([g.w]).forEach(function (fim) {
-            res.push({ x: g.x + ini, y: g.y, w: Math.max(1, fim - ini), h: g.h, ids: g.ids, recorte: true });
+            res.push({ x: g.x + ini, y: g.y, w: Math.max(1, fim - ini), h: g.h, ids: g.ids, recorte: true, ini: ini });
             ini = fim;
         });
         return res;
@@ -581,16 +599,23 @@
         var maxPartes = prop > 1.9 ? 4 : prop > 1.35 ? 3 : prop > 0.8 ? 2 : 1;
         var opcoes = [];
         for (var n = 1; n <= maxPartes; n++) {
-            var partes = n === 1 ? [g] : _dividirGlifo(g, seg, n);
-            var probs = [], nota = 0;
-            for (var k = 0; k < partes.length; k++) {
-                var p = _probDigito(_recorte28(partes[k], seg, tinta));
-                var maxD = 0;
-                for (var d = 0; d < 10; d++) if (p[d] > maxD) maxD = p[d];
-                nota += Math.log(Math.max(1e-6, maxD));
-                probs.push(p);
+            var vistos = {};
+            for (var v = 0; v < (n === 1 ? 1 : 3); v++) {
+                var partes = n === 1 ? [g] : _dividirGlifo(g, seg, n, v);
+                // Variantes que dão os mesmos cortes não são lidas de novo.
+                var assinatura = partes.map(function (q) { return q.w; }).join(",");
+                if (vistos[assinatura]) continue;
+                vistos[assinatura] = true;
+                var probs = [], nota = 0;
+                for (var k = 0; k < partes.length; k++) {
+                    var p = _probDigito(_recorte28(partes[k], seg, tinta));
+                    var maxD = 0;
+                    for (var d = 0; d < 10; d++) if (p[d] > maxD) maxD = p[d];
+                    nota += Math.log(Math.max(1e-6, maxD));
+                    probs.push(p);
+                }
+                opcoes.push({ probs: probs, nota: nota / partes.length - 0.22 * (n - 1) - (n === 1 ? Math.max(0, prop - 0.9) * 0.8 : 0) });
             }
-            opcoes.push({ probs: probs, nota: nota / partes.length - 0.22 * (n - 1) });
         }
         opcoes.sort(function (a, b) { return b.nota - a.nota; });
         // Só as divisões plausíveis (perto da melhor) viram hipótese.
