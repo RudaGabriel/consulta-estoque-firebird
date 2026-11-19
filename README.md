@@ -9,7 +9,7 @@
 <img alt="idioma: pt-BR" src="https://img.shields.io/badge/idioma-pt--BR-16A34A?style=flat">
 <img alt="banco: somente leitura" src="https://img.shields.io/badge/banco-somente%20leitura-DC2626?style=flat&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nbm9uZScgc3Ryb2tlPSd3aGl0ZScgc3Ryb2tlLXdpZHRoPScyLjInIHN0cm9rZS1saW5lY2FwPSdyb3VuZCcgc3Ryb2tlLWxpbmVqb2luPSdyb3VuZCc%2BPHBhdGggZD0nTTEyIDIyczgtNCA4LTEwVjVsLTgtMy04IDN2N2MwIDYgOCAxMCA4IDEweicvPjxwYXRoIGQ9J205IDEyIDIgMiA0LTQnLz48L3N2Zz4%3D&logoColor=white">
 <img alt="funciona: sem internet" src="https://img.shields.io/badge/funciona-sem%20internet-0891B2?style=flat">
-<img alt="testes: 159 passando" src="https://img.shields.io/badge/testes-159%20passando-22C55E?style=flat&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nbm9uZScgc3Ryb2tlPSd3aGl0ZScgc3Ryb2tlLXdpZHRoPScyLjInIHN0cm9rZS1saW5lY2FwPSdyb3VuZCcgc3Ryb2tlLWxpbmVqb2luPSdyb3VuZCc%2BPHBhdGggZD0nTTkgMnY2TDQgMTlhMiAyIDAgMCAwIDEuOCAzaDEyLjRhMiAyIDAgMCAwIDEuOC0zTDE1IDhWMicvPjxwYXRoIGQ9J004IDJoOCcvPjxwYXRoIGQ9J003IDE1aDEwJy8%2BPC9zdmc%2B&logoColor=white">
+<img alt="testes: 161 passando" src="https://img.shields.io/badge/testes-161%20passando-22C55E?style=flat&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nbm9uZScgc3Ryb2tlPSd3aGl0ZScgc3Ryb2tlLXdpZHRoPScyLjInIHN0cm9rZS1saW5lY2FwPSdyb3VuZCcgc3Ryb2tlLWxpbmVqb2luPSdyb3VuZCc%2BPHBhdGggZD0nTTkgMnY2TDQgMTlhMiAyIDAgMCAwIDEuOCAzaDEyLjRhMiAyIDAgMCAwIDEuOC0zTDE1IDhWMicvPjxwYXRoIGQ9J004IDJoOCcvPjxwYXRoIGQ9J003IDE1aDEwJy8%2BPC9zdmc%2B&logoColor=white">
 <img alt="licença: proprietária" src="https://img.shields.io/badge/licen%C3%A7a-propriet%C3%A1ria-6B7280?style=flat">
 
 <img alt="Node.js: 18+" src="https://img.shields.io/badge/Node.js-18%2B-339933?style=flat&logo=nodedotjs&logoColor=white">
@@ -189,11 +189,11 @@ Em vez de digitar, você pode **fotografar uma folha com os códigos escritos à
    - **Azul:** um dígito estava em dúvida e foi ajustado pelo código que existe no estoque.
    - **Amarelo:** confira (leitura incerta, código fora do estoque ou perto de um risco/hachura, onde um dígito pode ter se perdido).
    - **Círculo vermelho:** não foi possível ler. Digite o código no campo ao lado, olhando o círculo na foto.
-3. Clique num código da lista (ou no campo dele) e a foto **destaca esse código por 3 segundos**: o resto escurece e um anel pulsa em volta, para você achar na hora. Clicar em outro código durante o destaque passa para o novo. Corrija o que for preciso e clique em **Adicionar à lista**. Códigos que já estão na lista não são repetidos. Depois, clique em **Salvar lista**.
+3. Clique num código da lista (ou no campo dele) e a foto **destaca esse código por 3 segundos**: o resto escurece e um anel pulsa em volta, para você achar na hora. Clicar em outro código durante o destaque passa para o novo. Corrija o que for preciso e clique em **Adicionar à lista**. Só entram os códigos com a caixa marcada; se alguma caixa estiver desmarcada, o sistema avisa quais são e pergunta se você quer **prosseguir mesmo assim** (ou **voltar e conferir**, o que leva direto ao primeiro deles na foto). Códigos que já estão na lista não são repetidos. Depois, clique em **Salvar lista**.
 
 A leitura é **gratuita e funciona sem internet**: roda no próprio navegador, com redes neurais de dígitos treinadas para este sistema (inclusive com o "1" escrito em forma de "J"). Nenhuma foto sai do computador. Para o melhor resultado, fotografe de frente, com boa luz e a folha inteira. Só números são lidos: letras e palavras (como um título escrito na folha, mesmo de lado), números riscados, pontos e as linhas das colunas são ignorados. Um código lido com segurança que não está no estoque carregado (por exemplo, com estoque zero) aparece em amarelo como **"lido, mas não está no estoque"**, para você decidir. Formatos aceitos: JPG e PNG (fotos HEIC do iPhone precisam ser convertidas).
 
-**Precisão medida** em 3 fotos de listas reais (266 códigos escritos à mão), testando cada folha com redes que **não a tinham visto** no treino: de **97,5% a 100%** dos códigos lidos sozinhos, e **nenhum código marcado em verde estava errado**. O restante aparece em amarelo ou circulado, para você conferir. Cada código da folha recebe um número; nada é pulado sem aviso.
+**Precisão medida** em 10 fotos de listas reais (837 códigos escritos à mão, inclusive fotos reduzidas pelo WhatsApp): **99,3% dos códigos lidos sozinhos**, e **nenhum código marcado em verde estava errado**. Nas 3 folhas que as redes nunca viram no treino, foram 203 de 204 (99,5%). O restante aparece em amarelo ou circulado, para você conferir. Cada código da folha recebe um número; nada é pulado sem aviso. Dígitos encostados (como um "00" escrito sem tirar a caneta) são separados, e um código escrito rente à borda da foto é lido inteiro, mas aparece em amarelo para conferir.
 
 Por que não usar um leitor de texto pronto (como o Tesseract): testado nas mesmas folhas, ele acertou só 9% dos códigos manuscritos, porque é feito para texto impresso. As redes próprias, treinadas com a caligrafia das listas, são muito mais precisas e também funcionam sem internet.
 
@@ -336,10 +336,10 @@ Uma única biblioteca no servidor (`node-firebird`); o resto é o próprio Node.
 | Tela | HTML5, CSS e JavaScript sem framework | — | Leve, desenhada aos poucos para não travar com milhares de itens |
 | Tempo real | Server-Sent Events | — | Atualiza todas as abas abertas quando os dados mudam |
 | Motor de cálculo | `estoque-engine.js` | 1.11.0 | Agrupar, Combinar e Modo Automático (embutido no servidor) |
-| Leitura por foto | `ocr-digitos.js` + redes próprias | 1.2.0 | Separação dos números na foto e leitura dos dígitos no navegador, sem internet |
+| Leitura por foto | `ocr-digitos.js` + redes próprias | 1.3.0 | Separação dos números na foto e leitura dos dígitos no navegador, sem internet |
 | Treino das redes | [PyTorch](https://pytorch.org) + [MNIST](https://yann.lecun.com/exdb/mnist/) | — | Scripts de `ferramentas/ocr/` (fora do uso diário) |
 | Inicializador | `consulta-estoque.bat` (Windows) | 5.33.0 | Instala, verifica, inicia, reinicia sozinho e encerra sem perder dados |
-| Testes | `node:test` + `node:assert` | Node 18+ | 159 testes com Firebird simulado |
+| Testes | `node:test` + `node:assert` | Node 18+ | 161 testes com Firebird simulado |
 | Teste da tela | Playwright | — | Fluxos da interface, Modo Automático e leitura por foto |
 
 ---
@@ -352,7 +352,7 @@ node validar-client.js             # sintaxe do JavaScript da interface
 node --test consulta-estoque_test.js
 ```
 
-- **159 testes**, sem banco real: motor de cálculo, servidor (configuração, lista personalizada, SQL gerado, processamento do estoque e carga com um **Firebird simulado**) e leitor por foto (redes, decisão e conferência com o banco).
+- **161 testes**, sem banco real: motor de cálculo, servidor (configuração, lista personalizada, SQL gerado, processamento do estoque e carga com um **Firebird simulado**) e leitor por foto (redes, decisão e conferência com o banco).
 - A suíte **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
 
 ---
