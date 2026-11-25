@@ -9,10 +9,10 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.71.0**.
-- [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.11.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.72.0**.
+- [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.12.0**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.33.0**.
-- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.21.0**.
+- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.22.0**.
 - [`ocr-digitos.js`](#ocr-digitosjs): Leitor de códigos escritos à mão numa foto. Versão atual **1.3.0**.
 - [`ocr-digitos-modelos.js`](#ocr-digitos-modelosjs): Redes neurais treinadas do leitor. Versão atual **1.2.0**.
 - [`ferramentas/ocr/`](#ferramentasocr): Scripts de treino do leitor. Versão atual **1.2.0**.
@@ -27,6 +27,16 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.72.0 (2026-11-25)
+
+```text
+Modo Automático: uma linha separadora (────────────────────) depois de cada
+pedido no resultado, para separar visualmente os pedidos. Ao colar o
+resultado de volta na entrada, os separadores (e linhas só de traços, como
+"-----" ou "=====") são ignorados e recolocados, sem se repetir. Motor
+1.12.0 embutido.
+```
 
 ### 5.71.0 (2026-11-19)
 
@@ -790,6 +800,16 @@ BUG REAL corrigido: alerta "código não existe
 
 _Motor de cálculo (Agrupar, Combinar, Modo Automático)_
 
+### 1.12.0 (2026-11-25)
+
+```text
+Modo Automático: SEPARADOR_PEDIDOS (linha de traços);
+_comSeparadoresDePedidos põe o separador depois de cada pedido (linha que
+começa com o valor) e descarta separadores antigos; _ehLinhaSeparadora
+reconhece linhas só de traços (─, -, —, =, _, *, ., ~), para serem ignoradas
+na entrada.
+```
+
 ### 1.11.0 (2026-11-15)
 
 ```text
@@ -1022,6 +1042,13 @@ Passa a rodar as verificacoes de integridade
 ## consulta-estoque_test.js
 
 _Suíte de testes_
+
+### 2.22.0 (2026-11-25)
+
+```text
+Modo Automático: separador depois de cada pedido; separadores colados de
+volta não se repetem; reconhecimento das linhas separadoras. 164 testes.
+```
 
 ### 2.21.0 (2026-11-19)
 

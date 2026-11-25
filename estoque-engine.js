@@ -3,17 +3,12 @@
  *
  * @author Ruda Gabriel
  *
- * @version 1.11.0
+ * @version 1.12.0
  * @changelog
- *   1.11.0 - 2026-11-15 - Modo Automático:
- *     - _dividirPedidosDaLinha: vários pedidos na mesma linha, separados por
- *       "|" (ex.: "177,00 CREDITO | 23,00 PIX").
- *     - _separarResultadoDaLinha / _lerGrupoCodigos / _lerTokenCodigo: lê uma
- *       linha que já traz o resultado de um processamento anterior (códigos
- *       "3*08395(R$29,70)", com ou sem preço).
- *     - _conferirGrupoNoEstoque: confere se esses códigos ainda existem e
- *       cabem no estoque (somando o que as linhas anteriores usaram), sem
- *       deixar nada negativo.
+ *   1.12.0 - 2026-11-25 - Modo Automático: SEPARADOR_PEDIDOS (linha de
+ *     traços), _comSeparadoresDePedidos (põe o separador depois de cada
+ *     pedido na saída) e _ehLinhaSeparadora (reconhece separadores na
+ *     entrada, para serem ignorados).
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * ARQUITETURA:
@@ -652,6 +647,37 @@
         return partes;
     }
 
+    // Separador entre os pedidos na saída do Modo Automático (uma linha só de
+    // traços). Na entrada, linhas separadoras (deste ou de outro formato, como
+    // "-----" ou "=====") são ignoradas, para a saída poder ser colada de volta
+    // sem duplicar separadores.
+    var SEPARADOR_PEDIDOS = "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500";
+    var _CARACTERES_SEPARADORES = "\u2500\u2501\u2550-\u2013\u2014=_*.\u00b7\u2022~";
+    function _ehLinhaSeparadora(linha) {
+        var t = String(linha == null ? "" : linha), visiveis = 0;
+        for (var i = 0; i < t.length; i++) {
+            var ch = t.charAt(i), cc = t.charCodeAt(i);
+            if (cc <= 32 || cc === 160) continue;
+            if (_CARACTERES_SEPARADORES.indexOf(ch) === -1) return false;
+            visiveis++;
+        }
+        return visiveis >= 3;
+    }
+    // Põe o separador depois de cada linha de pedido (a que começa com o
+    // valor, um dígito). Cabeçalhos, linhas em branco e textos livres ficam
+    // como estão; separadores antigos que tenham sobrado são descartados.
+    function _comSeparadoresDePedidos(linhas) {
+        var out = [];
+        (linhas || []).forEach(function(l) {
+            var txt = String(l == null ? "" : l);
+            if (_ehLinhaSeparadora(txt)) return;
+            out.push(txt);
+            var c = txt.trim().charCodeAt(0);
+            if (c >= 48 && c <= 57) out.push(SEPARADOR_PEDIDOS);
+        });
+        return out;
+    }
+
     // Separa uma linha (um pedido) em: base (valor + forma de pagamento), os
     // grupos de códigos de um resultado anterior e o marcador [NAO ENCONTRADO].
     // Com TAB (formato da saída do sistema): cada campo depois do primeiro que
@@ -1052,6 +1078,7 @@
         FAIXA_EXCEDENTE_LP     : FAIXA_EXCEDENTE_LP,
         PRECO_SENTINEL_ZERADO  : PRECO_SENTINEL_ZERADO,
         MAX_COMBINAR_RESULTADOS: MAX_COMBINAR_RESULTADOS,
+        SEPARADOR_PEDIDOS      : SEPARADOR_PEDIDOS,
         // Funções puras de estoque
         _qtdMaximaDisponivel               : _qtdMaximaDisponivel,
         _grupoRespeitaLimites              : _grupoRespeitaLimites,
@@ -1069,6 +1096,8 @@
         _lerGrupoCodigos                   : _lerGrupoCodigos,
         _dividirPedidosDaLinha             : _dividirPedidosDaLinha,
         _separarResultadoDaLinha           : _separarResultadoDaLinha,
+        _ehLinhaSeparadora                 : _ehLinhaSeparadora,
+        _comSeparadoresDePedidos           : _comSeparadoresDePedidos,
         _conferirGrupoNoEstoque            : _conferirGrupoNoEstoque,
         // Funções assíncronas de busca
         encontrarGruposAsync                        : encontrarGruposAsync,
