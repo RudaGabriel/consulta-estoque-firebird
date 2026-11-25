@@ -9,10 +9,10 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 
 ## Arquivos
 
-- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.72.0**.
-- [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.12.0**.
+- [`consulta-estoque.js`](#consulta-estoquejs): Servidor e interface web. Versão atual **5.72.1**.
+- [`estoque-engine.js`](#estoque-enginejs): Motor de cálculo (Agrupar, Combinar, Modo Automático). Versão atual **1.12.1**.
 - [`consulta-estoque.bat`](#consulta-estoquebat): Inicializador para Windows. Versão atual **5.33.0**.
-- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.22.0**.
+- [`consulta-estoque_test.js`](#consulta-estoque_testjs): Suíte de testes. Versão atual **2.22.1**.
 - [`ocr-digitos.js`](#ocr-digitosjs): Leitor de códigos escritos à mão numa foto. Versão atual **1.3.0**.
 - [`ocr-digitos-modelos.js`](#ocr-digitos-modelosjs): Redes neurais treinadas do leitor. Versão atual **1.2.0**.
 - [`ferramentas/ocr/`](#ferramentasocr): Scripts de treino do leitor. Versão atual **1.2.0**.
@@ -27,6 +27,14 @@ Versões anteriores às listadas não estão no histórico deste repositório.
 ## consulta-estoque.js
 
 _Servidor e interface web_
+
+### 5.72.1 (2026-11-25)
+
+```text
+Modo Automático: a linha separadora fica só entre os pedidos do mesmo
+vendedor. Não entra depois do último pedido de cada vendedor (antes do
+nome do próximo) nem no fim da lista. Motor 1.12.1 embutido.
+```
 
 ### 5.72.0 (2026-11-25)
 
@@ -800,6 +808,14 @@ BUG REAL corrigido: alerta "código não existe
 
 _Motor de cálculo (Agrupar, Combinar, Modo Automático)_
 
+### 1.12.1 (2026-11-25)
+
+```text
+Modo Automático: _comSeparadoresDePedidos põe o separador só entre pedidos
+seguidos (o próximo pedido não vazio também é pedido). Não entra depois do
+último pedido de cada vendedor nem no fim da lista.
+```
+
 ### 1.12.0 (2026-11-25)
 
 ```text
@@ -1042,6 +1058,13 @@ Passa a rodar as verificacoes de integridade
 ## consulta-estoque_test.js
 
 _Suíte de testes_
+
+### 2.22.1 (2026-11-25)
+
+```text
+Modo Automático: testes do separador só entre os pedidos do mesmo vendedor.
+165 testes.
+```
 
 ### 2.22.0 (2026-11-25)
 

@@ -3,12 +3,11 @@
  *
  * @author Ruda Gabriel
  *
- * @version 1.12.0
+ * @version 1.12.1
  * @changelog
- *   1.12.0 - 2026-11-25 - Modo Automático: SEPARADOR_PEDIDOS (linha de
- *     traços), _comSeparadoresDePedidos (põe o separador depois de cada
- *     pedido na saída) e _ehLinhaSeparadora (reconhece separadores na
- *     entrada, para serem ignorados).
+ *   1.12.1 - 2026-11-25 - Modo Automático: o separador fica só entre os
+ *     pedidos do mesmo vendedor; não entra depois do último pedido de cada
+ *     vendedor nem no fim da lista (_comSeparadoresDePedidos).
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * ARQUITETURA:
@@ -663,8 +662,15 @@
         }
         return visiveis >= 3;
     }
-    // Põe o separador depois de cada linha de pedido (a que começa com o
-    // valor, um dígito). Cabeçalhos, linhas em branco e textos livres ficam
+    // Linha de pedido: começa com o valor (um dígito).
+    function _ehLinhaPedido(linha) {
+        var c = String(linha == null ? "" : linha).trim().charCodeAt(0);
+        return c >= 48 && c <= 57;
+    }
+    // Põe o separador entre os pedidos do mesmo vendedor: depois de um pedido
+    // só quando a próxima linha não vazia também é pedido. Assim não entra
+    // depois do último pedido de cada vendedor (antes do cabeçalho do próximo)
+    // nem no fim da lista. Cabeçalhos, linhas em branco e textos livres ficam
     // como estão; separadores antigos que tenham sobrado são descartados.
     function _comSeparadoresDePedidos(linhas) {
         var out = [];
@@ -672,10 +678,16 @@
             var txt = String(l == null ? "" : l);
             if (_ehLinhaSeparadora(txt)) return;
             out.push(txt);
-            var c = txt.trim().charCodeAt(0);
-            if (c >= 48 && c <= 57) out.push(SEPARADOR_PEDIDOS);
         });
-        return out;
+        var res = [];
+        out.forEach(function(txt, i) {
+            res.push(txt);
+            if (!_ehLinhaPedido(txt)) return;
+            var j = i + 1;
+            while (j < out.length && !out[j].trim()) j++;
+            if (j < out.length && _ehLinhaPedido(out[j])) res.push(SEPARADOR_PEDIDOS);
+        });
+        return res;
     }
 
     // Separa uma linha (um pedido) em: base (valor + forma de pagamento), os
