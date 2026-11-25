@@ -5,11 +5,11 @@
  *
  * @author Ruda Gabriel
  *
- * @version 2.22.0
+ * @version 2.22.1
  * @changelog
- *   2.22.0 - 2026-11-25 - Modo Automático: separador depois de cada pedido na
- *     saída; separadores colados de volta não se repetem; reconhecimento das
- *     linhas separadoras. 164 testes.
+ *   2.22.1 - 2026-11-25 - Modo Automático: testes do separador só entre os
+ *     pedidos do mesmo vendedor (não antes do próximo vendedor nem no fim).
+ *     165 testes.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * EXECUÇÃO:
@@ -422,7 +422,7 @@ describe("Modo Automático — conferência de linhas já preenchidas", () => {
         assert.ok(eng._ehLinhaSeparadora(S));
         assert.deepEqual(eng._comSeparadoresDePedidos([
             "CLIENTE A:", "333,00\tCREDITO\t8415(R$33,00)", "381,42 PIX [NAO ENCONTRADO]", "", "CLIENTE B:", "50,00 PIX | 20,00 CREDITO"
-        ]), ["CLIENTE A:", "333,00\tCREDITO\t8415(R$33,00)", S, "381,42 PIX [NAO ENCONTRADO]", S, "", "CLIENTE B:", "50,00 PIX | 20,00 CREDITO", S]);
+        ]), ["CLIENTE A:", "333,00\tCREDITO\t8415(R$33,00)", S, "381,42 PIX [NAO ENCONTRADO]", "", "CLIENTE B:", "50,00 PIX | 20,00 CREDITO"]);
         assert.deepEqual(eng._comSeparadoresDePedidos([]), []);
         assert.deepEqual(eng._comSeparadoresDePedidos(null), []);
     });
@@ -430,7 +430,15 @@ describe("Modo Automático — conferência de linhas já preenchidas", () => {
         const S = eng.SEPARADOR_PEDIDOS;
         const uma = eng._comSeparadoresDePedidos(["CLIENTE A:", "10,00 PIX", "20,00 PIX"]);
         assert.deepEqual(eng._comSeparadoresDePedidos(uma), uma);
-        assert.deepEqual(eng._comSeparadoresDePedidos(["10,00 PIX", "-----", "=====", "20,00 PIX"]), ["10,00 PIX", S, "20,00 PIX", S]);
+        assert.deepEqual(eng._comSeparadoresDePedidos(["10,00 PIX", "-----", "=====", "20,00 PIX"]), ["10,00 PIX", S, "20,00 PIX"]);
+    });
+    test("separador só entre pedidos do mesmo vendedor (não antes do próximo vendedor nem no fim)", () => {
+        const S = eng.SEPARADOR_PEDIDOS;
+        assert.deepEqual(eng._comSeparadoresDePedidos([
+            "Vendedor A:", "1,00 PIX", "2,00 PIX", "3,00 PIX", "Vendedor B:", "4,00 PIX", "5,00 PIX"
+        ]), ["Vendedor A:", "1,00 PIX", S, "2,00 PIX", S, "3,00 PIX", "Vendedor B:", "4,00 PIX", S, "5,00 PIX"]);
+        assert.deepEqual(eng._comSeparadoresDePedidos(["1,00 PIX", "", "2,00 PIX", ""]), ["1,00 PIX", S, "", "2,00 PIX", ""]);
+        assert.deepEqual(eng._comSeparadoresDePedidos(["Vendedor A:", "1,00 PIX"]), ["Vendedor A:", "1,00 PIX"]);
     });
     test("_ehLinhaSeparadora reconhece só linhas de traços", () => {
         ["-----", "=====", "- - - -", "______", "\u2014\u2014\u2014", "  \u2500\u2500\u2500  ", "***", "..."].forEach(l => assert.equal(eng._ehLinhaSeparadora(l), true, l));
