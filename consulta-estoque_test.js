@@ -5,11 +5,11 @@
  *
  * @author Ruda Gabriel
  *
- * @version 2.21.0
+ * @version 2.22.0
  * @changelog
- *   2.21.0 - 2026-11-19 - Leitor por foto: dígito cortado pela borda da foto
- *     volta para o código vizinho; "Adicionar à lista" avisa quando há caixas
- *     desmarcadas. 161 testes.
+ *   2.22.0 - 2026-11-25 - Modo Automático: separador depois de cada pedido na
+ *     saída; separadores colados de volta não se repetem; reconhecimento das
+ *     linhas separadoras. 164 testes.
  * Histórico completo das versões: CHANGELOG.md no repositório.
  *
  * EXECUÇÃO:
@@ -416,6 +416,25 @@ describe("Modo Automático — conferência de linhas já preenchidas", () => {
         assert.deepEqual(eng._lerTokenCodigo("08395"), { cod: "08395", qtd: 1, preco: null });
         assert.equal(eng._lerTokenCodigo("CREDITO"), null);
         assert.equal(eng._lerTokenCodigo("222,00"), null);
+    });
+    test("_comSeparadoresDePedidos põe o separador depois de cada pedido", () => {
+        const S = eng.SEPARADOR_PEDIDOS;
+        assert.ok(eng._ehLinhaSeparadora(S));
+        assert.deepEqual(eng._comSeparadoresDePedidos([
+            "CLIENTE A:", "333,00\tCREDITO\t8415(R$33,00)", "381,42 PIX [NAO ENCONTRADO]", "", "CLIENTE B:", "50,00 PIX | 20,00 CREDITO"
+        ]), ["CLIENTE A:", "333,00\tCREDITO\t8415(R$33,00)", S, "381,42 PIX [NAO ENCONTRADO]", S, "", "CLIENTE B:", "50,00 PIX | 20,00 CREDITO", S]);
+        assert.deepEqual(eng._comSeparadoresDePedidos([]), []);
+        assert.deepEqual(eng._comSeparadoresDePedidos(null), []);
+    });
+    test("saída colada de volta: separadores antigos não se repetem", () => {
+        const S = eng.SEPARADOR_PEDIDOS;
+        const uma = eng._comSeparadoresDePedidos(["CLIENTE A:", "10,00 PIX", "20,00 PIX"]);
+        assert.deepEqual(eng._comSeparadoresDePedidos(uma), uma);
+        assert.deepEqual(eng._comSeparadoresDePedidos(["10,00 PIX", "-----", "=====", "20,00 PIX"]), ["10,00 PIX", S, "20,00 PIX", S]);
+    });
+    test("_ehLinhaSeparadora reconhece só linhas de traços", () => {
+        ["-----", "=====", "- - - -", "______", "\u2014\u2014\u2014", "  \u2500\u2500\u2500  ", "***", "..."].forEach(l => assert.equal(eng._ehLinhaSeparadora(l), true, l));
+        ["", "--", "10,00 PIX", "CLIENTE A:", "-- a --", "1---", null, undefined].forEach(l => assert.equal(eng._ehLinhaSeparadora(l), false, String(l)));
     });
     test("_dividirPedidosDaLinha separa por | só quando cada parte começa com valor", () => {
         assert.deepEqual(eng._dividirPedidosDaLinha("177,00  CREDITO | 23,00 PIX"), ["177,00  CREDITO", "23,00 PIX"]);

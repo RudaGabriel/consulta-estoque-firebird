@@ -9,7 +9,7 @@
 <img alt="idioma: pt-BR" src="https://img.shields.io/badge/idioma-pt--BR-16A34A?style=flat">
 <img alt="banco: somente leitura" src="https://img.shields.io/badge/banco-somente%20leitura-DC2626?style=flat&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nbm9uZScgc3Ryb2tlPSd3aGl0ZScgc3Ryb2tlLXdpZHRoPScyLjInIHN0cm9rZS1saW5lY2FwPSdyb3VuZCcgc3Ryb2tlLWxpbmVqb2luPSdyb3VuZCc%2BPHBhdGggZD0nTTEyIDIyczgtNCA4LTEwVjVsLTgtMy04IDN2N2MwIDYgOCAxMCA4IDEweicvPjxwYXRoIGQ9J205IDEyIDIgMiA0LTQnLz48L3N2Zz4%3D&logoColor=white">
 <img alt="funciona: sem internet" src="https://img.shields.io/badge/funciona-sem%20internet-0891B2?style=flat">
-<img alt="testes: 161 passando" src="https://img.shields.io/badge/testes-161%20passando-22C55E?style=flat&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nbm9uZScgc3Ryb2tlPSd3aGl0ZScgc3Ryb2tlLXdpZHRoPScyLjInIHN0cm9rZS1saW5lY2FwPSdyb3VuZCcgc3Ryb2tlLWxpbmVqb2luPSdyb3VuZCc%2BPHBhdGggZD0nTTkgMnY2TDQgMTlhMiAyIDAgMCAwIDEuOCAzaDEyLjRhMiAyIDAgMCAwIDEuOC0zTDE1IDhWMicvPjxwYXRoIGQ9J004IDJoOCcvPjxwYXRoIGQ9J003IDE1aDEwJy8%2BPC9zdmc%2B&logoColor=white">
+<img alt="testes: 164 passando" src="https://img.shields.io/badge/testes-164%20passando-22C55E?style=flat&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nbm9uZScgc3Ryb2tlPSd3aGl0ZScgc3Ryb2tlLXdpZHRoPScyLjInIHN0cm9rZS1saW5lY2FwPSdyb3VuZCcgc3Ryb2tlLWxpbmVqb2luPSdyb3VuZCc%2BPHBhdGggZD0nTTkgMnY2TDQgMTlhMiAyIDAgMCAwIDEuOCAzaDEyLjRhMiAyIDAgMCAwIDEuOC0zTDE1IDhWMicvPjxwYXRoIGQ9J004IDJoOCcvPjxwYXRoIGQ9J003IDE1aDEwJy8%2BPC9zdmc%2B&logoColor=white">
 <img alt="licença: proprietária" src="https://img.shields.io/badge/licen%C3%A7a-propriet%C3%A1ria-6B7280?style=flat">
 
 <img alt="Node.js: 18+" src="https://img.shields.io/badge/Node.js-18%2B-339933?style=flat&logo=nodedotjs&logoColor=white">
@@ -133,7 +133,7 @@ Para cada linha nova (ou refeita), o sistema:
 2. Procura **a combinação de itens que mais se aproxima do valor**: primeiro o valor exato, depois dentro da tolerância de + R$ 40.
 3. **Desconta o que já foi usado nas linhas anteriores** da mesma lista, para não sugerir mais unidades do que existem.
 4. Se não achar nada, pode **ampliar a faixa** de tolerância e **buscar mais itens no catálogo completo** do banco (até 5 rodadas de 1.000 itens).
-5. Escreve o resultado ao lado de cada linha (`[NAO ENCONTRADO]` é substituído pelos códigos encontrados) e **leva a tela até o botão "Copiar resultado"**. Depois de copiar, os códigos podem ser marcados como usados.
+5. Escreve o resultado ao lado de cada linha (`[NAO ENCONTRADO]` é substituído pelos códigos encontrados), com uma **linha separadora (`────────────────────`) depois de cada pedido**, e **leva a tela até o botão "Copiar resultado"**. Se o resultado for colado de volta na entrada, os separadores são ignorados e recolocados, sem se repetir (linhas só de traços, como `-----` ou `=====`, também são ignoradas). Depois de copiar, os códigos podem ser marcados como usados.
 
 **Valor de referência** (escolha no topo do Modo Automático; fica guardada no navegador):
 
@@ -339,7 +339,7 @@ Uma única biblioteca no servidor (`node-firebird`); o resto é o próprio Node.
 | Leitura por foto | `ocr-digitos.js` + redes próprias | 1.3.0 | Separação dos números na foto e leitura dos dígitos no navegador, sem internet |
 | Treino das redes | [PyTorch](https://pytorch.org) + [MNIST](https://yann.lecun.com/exdb/mnist/) | — | Scripts de `ferramentas/ocr/` (fora do uso diário) |
 | Inicializador | `consulta-estoque.bat` (Windows) | 5.33.0 | Instala, verifica, inicia, reinicia sozinho e encerra sem perder dados |
-| Testes | `node:test` + `node:assert` | Node 18+ | 161 testes com Firebird simulado |
+| Testes | `node:test` + `node:assert` | Node 18+ | 164 testes com Firebird simulado |
 | Teste da tela | Playwright | — | Fluxos da interface, Modo Automático e leitura por foto |
 
 ---
@@ -352,7 +352,7 @@ node validar-client.js             # sintaxe do JavaScript da interface
 node --test consulta-estoque_test.js
 ```
 
-- **161 testes**, sem banco real: motor de cálculo, servidor (configuração, lista personalizada, SQL gerado, processamento do estoque e carga com um **Firebird simulado**) e leitor por foto (redes, decisão e conferência com o banco).
+- **164 testes**, sem banco real: motor de cálculo, servidor (configuração, lista personalizada, SQL gerado, processamento do estoque e carga com um **Firebird simulado**) e leitor por foto (redes, decisão e conferência com o banco).
 - A suíte **não conecta no banco, não abre porta e não grava arquivos**, por isso o `.bat` pode executá-la a cada inicialização.
 
 ---
